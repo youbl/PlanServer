@@ -1,0 +1,14 @@
+/PlanServerExtend/bin
+/PlanServerExtend/obj
+/PlanServerRunTest/bin
+/PlanServerRunTest/obj
+/PlanServerService/bin
+/PlanServerService/obj
+/PlanServerTaskManager/bin
+/PlanServerTaskManager/obj
+/PlanServerTaskManager.Web/bin
+/PlanServerTaskManager.Web/obj
+/PlanServerWinExe/bin
+/PlanServerWinExe/obj
+/PlanServerWinService/bin
+/PlanServerWinService/obj
