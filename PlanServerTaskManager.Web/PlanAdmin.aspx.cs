@@ -19,7 +19,8 @@ namespace PlanServerTaskManager.Web
         protected string _pwd;   // ip在白名单里时，我们部门进入此页面的密码md5值
         protected string _pwdOther; // ip在白名单里时，其它部门进入此页面的密码md5值，tqnd.91.
 
-        protected string _xxx;   // ip不在白名单时，进入此页面的密码md5值
+        protected string _pwdAdminInner;   // 内网管理员进入此页面的密码md5值
+        protected string _pwdAdminOuter;   // 外网管理员进入此页面的密码md5值
 
         protected const bool _needProxy = false;                            // 是否需要通过代理访问此页面
 
@@ -29,12 +30,17 @@ namespace PlanServerTaskManager.Web
         protected string m_localIp, m_remoteIp, m_remoteIpLst;
         protected bool m_isAdmin = false;
         static bool m_needLogin = !(ConfigurationManager.AppSettings["NoPlanPwd"] ?? "").Equals("true", StringComparison.OrdinalIgnoreCase);
+        protected static string m_domain = ConfigurationManager.AppSettings["DomainName"] ?? "aaa.bbb.com";
+
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            // ClearDir(SocketCommon.TmpDir);
+
             _pwd = labCommon.Text;
             _pwdOther = labCommonOther.Text;
-            _xxx = labMain.Text;
+            _pwdAdminInner = labMainInner.Text;
+            _pwdAdminOuter = labMainOuter.Text;
 
             Response.Cache.SetNoStore(); // 这一句会导致Response.WriteFile 无法下载
             
@@ -426,8 +432,9 @@ onclick='dirZipDown(""{0}"");' tabindex='-1'>ZIP</a>
 <td style='text-align:left;'>
     <label><input type='checkbox' value='{0}' name='chkFileListBeinet' /></label>
     <a href='javascript:void(0);' onclick=""fileReName('{0}', 1);"" tabindex='-1'>改名</a>|<a href='javascript:void(0);' 
-onclick=""fileDel('{0}', 1);"" tabindex='-1'>删除</a>|<a href='javascript:void(0);' 
-onclick='fileDownOpen(""{0}"");' tabindex='-1'>下载</a>
+onclick=""fileDel('{0}', 1);"" tabindex='-1'>删</a>|<a href='javascript:void(0);' 
+onclick='fileDownOpen(""{0}"");' tabindex='-1'>下</a>|<a href='javascript:void(0);' 
+onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
 </td>
 <td style='text-align:left;'>{0}</td>
 <td style='text-align:center;'>{1}</td>
@@ -763,10 +770,10 @@ onclick='fileDownOpen(""{0}"");' tabindex='-1'>下载</a>
 
             // 是否内网ip
             bool isInner = ip.StartsWith("192.168.") || ip.StartsWith("172.16.") || ip.StartsWith("10.") ||
+                ip.StartsWith("127.") || ip == "::1";
                 //ip.StartsWith("121.207.242") || ip.StartsWith("121.207.240") || ip.StartsWith("121.207.254") ||
                 //ip.StartsWith("58.22.103.") || ip.StartsWith("58.22.105.") || ip.StartsWith("58.22.107.") ||
-                ip.StartsWith("127.") || ip == "::1";
-            bool isCompany = ip == "218.5.2.219" || ip == "220.250.21.82";
+            bool isCompany = ip == "218.5.2.219" || ip == "220.250.21.82" || ip == "110.87.60.97";
 
             string str = Request.Form["txtp"]; //GetSession("p");
             if (!string.IsNullOrEmpty(str))
@@ -800,14 +807,15 @@ onclick='fileDownOpen(""{0}"");' tabindex='-1'>下载</a>
                         return true;
                     }
                 }
-                else if (str.Equals(_xxx, StringComparison.OrdinalIgnoreCase))
+                else if ((isInner || isCompany) && str.Equals(_pwdAdminInner, StringComparison.OrdinalIgnoreCase))
                 {
-                    // 公司出口ip，禁用超级管理员密码，要求他们设置Host
-                    if (!isCompany)
-                    {
-                        m_isAdmin = true;
-                        return true;
-                    }
+                    m_isAdmin = true;
+                    return true;
+                }
+                else if (!isInner && !isCompany && str.Equals(_pwdAdminOuter, StringComparison.OrdinalIgnoreCase))
+                {
+                    m_isAdmin = true;
+                    return true;
                 }
             }
             WriteLoginForm();
@@ -820,20 +828,26 @@ onclick='fileDownOpen(""{0}"");' tabindex='-1'>下载</a>
         }
         void WriteLoginForm()
         {
+            string alert = string.Empty;
+            if (Request.HttpMethod == "POST")
+            {
+                alert = "<script type='text/javascript'>alert('如果密码正确,请确认是否设置了HOST.');</script>";
+            }
             string loginFrm = string.Format(@"<html>
 <body>
     <form method='post'>
         password:<input type='password' name='txtp'/><input type='submit'/>
         <hr/>
         请在本地Host设置如下域名后再访问（只允许192.168.*.*网段访问）<br/>
-        <span style='font-weight:bold;color:red;'>10.1.240.188 searchadmin.sj.91.com</span><hr />
+        <span style='font-weight:bold;color:red;'>10.1.240.188 {5}</span><hr />
         QueryString:{0}<br/>
         Form:{1}<br/>
         RemoteIP:{2}
         LocalIP:{3}
     </form>
+    {4}
 </body>
-</html>", Request.QueryString, Request.Form, m_remoteIp, m_localIp);
+</html>", Request.QueryString, Request.Form, m_remoteIp, m_localIp, alert, m_domain);
             Response.Write(loginFrm);
             Response.End();
             
@@ -1063,63 +1077,53 @@ onclick='fileDownOpen(""{0}"");' tabindex='-1'>下载</a>
 
         #endregion
 
-        //#region Sqlite相关方法
-        //static object ExecuteScalar(string db, string sql, params SQLiteParameter[] parameters)
-        //{
-        //    using (SQLiteConnection connection = PrepareConnection(db))
-        //    using (SQLiteCommand command = connection.CreateCommand())
-        //    {
-        //        command.CommandText = sql;
-        //        if (parameters != null)
-        //        {
-        //            foreach (SQLiteParameter item in parameters)
-        //            {
-        //                command.Parameters.Add(item);
-        //            }
-        //        }
-        //        connection.Open();
-        //        return command.ExecuteScalar();
-        //    }
-        //}
-        //static SQLiteDataReader ExecuteReader(string db, string sql, params SQLiteParameter[] parameters)
-        //{
-        //    SQLiteConnection connection = PrepareConnection(db);
-        //    SQLiteCommand command = connection.CreateCommand();
-        //    command.CommandText = sql;
-        //    if (parameters != null)
-        //    {
-        //        foreach (SQLiteParameter item in parameters)
-        //        {
-        //            command.Parameters.Add(item);
-        //        }
-        //    }
-        //    connection.Open();
-        //    return command.ExecuteReader(CommandBehavior.CloseConnection);
-        //}
-        //static int ExecuteNonQuery(string db, string sql, params SQLiteParameter[] parameters)
-        //{
-        //    using (SQLiteConnection connection = PrepareConnection(db))
-        //    using (SQLiteCommand command = connection.CreateCommand())
-        //    {
-        //        command.CommandText = sql;
-        //        if (parameters != null)
-        //        {
-        //            foreach (SQLiteParameter item in parameters)
-        //            {
-        //                command.Parameters.Add(item);
-        //            }
-        //        }
-        //        connection.Open();
-        //        return command.ExecuteNonQuery();
-        //    }
-        //}
-        
-        //static SQLiteConnection PrepareConnection(string constr)
-        //{
-        //    SQLiteConnectionStringBuilder conString = new SQLiteConnectionStringBuilder();
-        //    conString.DataSource = constr;
-        //    return new SQLiteConnection(conString.ToString());
-        //}        
-        //#endregion
+        #region 定时清空临时目录的方法
+        static object _clearlockobj = new object();
+        private static bool _clearing = false;
+        /// <summary>
+        /// 定时清除临时目录旧文件的线程
+        /// </summary>
+        private static void ClearDir(string dir)
+        {
+            if (_clearing)
+                return;
+            lock (_clearlockobj)
+            {
+                if (_clearing)
+                    return;
+                _clearing = true;
+            }
+            ThreadPool.UnsafeQueueUserWorkItem(item =>
+            {
+                StringBuilder sb = new StringBuilder();
+                while (true)
+                {
+                    try
+                    {
+                        sb.Clear();
+                        DateTime yestday = DateTime.Now.AddDays(-1);
+                        if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir))
+                            return;
+                        foreach (string file in Directory.GetFiles(dir)) //, "*", SearchOption.AllDirectories))
+                        {
+                            if (File.GetLastWriteTime(file) < yestday)
+                            {
+                                File.Delete(file);
+                                sb.AppendLine(file);
+                            }
+                        }
+                        Log("成功删除\r\n" + sb.ToString(), "del", null);
+                    }
+                    catch (Exception exp)
+                    {
+                        Log("清空目录出错" + exp, "exp\\", null);
+                    }
+                    Thread.Sleep(1000 * 3600 * 12);
+                }
+            }, null);
+        }
+
+        #endregion
+
     }
 }

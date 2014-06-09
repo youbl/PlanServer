@@ -132,9 +132,10 @@
     </script>
 </head>
 <body style='font-size:13px;'>
-    <asp:Label runat="server" ID="labCommon" Text="657541DB7DDE258FE2C905B1B361A039"></asp:Label>
-    <asp:Label runat="server" ID="labCommonOther" Text="82cc60100fa1557bf1f2b6eb0acea502"></asp:Label>
-    <asp:Label runat="server" ID="labMain" Text="8f13267a0d8a9ea0b964e7b5e7b36eb5"></asp:Label>
+    <asp:Label runat="server" Visible="False" ID="labCommon" Text="657541DB7DDE258FE2C905B1B361A039"></asp:Label>
+    <asp:Label runat="server" Visible="False" ID="labCommonOther" Text="82cc60100fa1557bf1f2b6eb0acea502"></asp:Label>
+    <asp:Label runat="server" Visible="False" ID="labMainInner" Text="8f13267a0d8a9ea0b964e7b5e7b36eb5"></asp:Label>
+    <asp:Label runat="server" Visible="False" ID="labMainOuter" Text="ec5f9004ed85f9ef895d80a3f050098b"></asp:Label>
 <div>
     <div style="background-color:greenyellow">
         <label><input type="checkbox" onclick="chkAll(this);" />全选服务器</label>
@@ -163,14 +164,14 @@
         <div id="divret" style="width:1500px;"></div>
         <hr />    
         <pre>
-计划任务程序使用说明（<a href="http://searchadmin.sj.91.com/planService.rar">程序下载</a>）：
+计划任务程序使用说明（<a href="http://<%=m_domain %>/planService.rar">64位程序下载</a>｜<a href="http://<%=m_domain %>/planService_Win32.rar">32位程序下载</a>）：
     1、拷贝程序到服务器上，然后执行目录下的installService.bat，安装服务，安装完成后服务会自动启动；
     2、开通这台服务器的23244端口入站权限，开给web管理机ip：10.1.240.188 
        外网服务器要开给web管理机的外网ip：121.207.240.188
     3、把服务器的ip和你的个人电脑ip提交给管理员，让管理员添加个人ip对服务器的管理权限
     4、设置HOST
-       10.1.240.188 searchadmin.sj.91.com 
-    5、管理计划任务，进入页面：http://searchadmin.sj.91.com/planadmin.aspx
+       10.1.240.188 <%=m_domain %> 
+    5、管理计划任务，进入页面：http://<%=m_domain %>/planadmin.aspx
        在“读取任务”按钮左侧的文本框内输入服务器ip，点击“读取任务”即可
     注意：请参考程序目录下的exe.Config文件里的注释说明，以开通或关闭文件管理等功能
 

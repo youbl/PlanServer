@@ -404,7 +404,7 @@ function countDirSize(dir) {
 }
 
 // 下载或打开文件
-function fileDownOpen(file) {
+function fileDownOpen(file, open) {
     var ip = getIP();
     if (ip == null)
         return;
@@ -428,11 +428,15 @@ function fileDownOpen(file) {
             alert("获取成功，但是返回数据有误，请重试");
             return;
         }
+        var enFile = encodeURIComponent(localfile);
         var html = "文件 <span style='color:blue;font-weight:bold;'>" + file + "</span><br/>已成功获取，请选择操作方式：<hr/>" +
-            "<a href='?flg=119&file=" + encodeURIComponent(localfile) + "&name=" + encodeURIComponent(file) + "'>下载文件</a> | " +
-            "<a href='?flg=120&file=" + encodeURIComponent(localfile) + "' target='_blank'>直接打开</a><hr/>" +
+            "<a href='?flg=119&file=" + enFile + "&name=" + encodeURIComponent(file) + "'>下载文件</a> | " +
+            "<a href='?flg=120&file=" + enFile + "' target='_blank'>直接打开</a><hr/>" +
             "注：如果不是文本文件，建议选择下载";
         showDialog(html, null);
+        if (open == 1) {
+            window.open("?flg=120&file=" + enFile);
+        }
     });
 }
 
