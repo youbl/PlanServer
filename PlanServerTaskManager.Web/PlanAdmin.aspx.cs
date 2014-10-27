@@ -28,9 +28,12 @@ namespace PlanServerTaskManager.Web
 
         protected string m_currentUrl;
         protected string m_localIp, m_remoteIp, m_remoteIpLst;
-        protected bool m_isAdmin = false;
-        static bool m_needLogin = !(ConfigurationManager.AppSettings["NoPlanPwd"] ?? "").Equals("true", StringComparison.OrdinalIgnoreCase);
-        protected static string m_domain = ConfigurationManager.AppSettings["DomainName"] ?? "aaa.bbb.com";
+
+        protected static bool m_needLogin = !(ConfigurationManager.AppSettings["PlanNoPwd"] ?? "").Equals("true", StringComparison.OrdinalIgnoreCase);
+        protected static bool m_isAdmin = !m_needLogin;
+        protected static bool m_enableSql = false;
+
+        protected static string m_domain = ConfigurationManager.AppSettings["PlanDomainName"] ?? "aaa.bbb.com";
 
 
         protected void Page_Load(object sender, EventArgs e)
@@ -63,8 +66,7 @@ namespace PlanServerTaskManager.Web
                 return;
             }
 //#endif
-
-
+            m_enableSql = !string.IsNullOrEmpty(Request.QueryString["sql"]);
 
             string flg = Request.Form["flg"] ?? Request.QueryString["flg"];
             if (!string.IsNullOrEmpty(flg))
@@ -184,6 +186,10 @@ namespace PlanServerTaskManager.Web
 
                         case OperationType.GetProcesses:
                             GetProcess();
+                            break;
+
+                        case OperationType.RunSql:
+                            RunSql();
                             break;
                     }
                 }
@@ -755,13 +761,20 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
 
             Response.Write(str);// + "<hr/>" +Request.Form);
         }
+
+        void RunSql()
+        {
+            string sql = Request.Form["sql"];
+            Response.Write(AdminDal.RunSql(sql));
+        }
         #endregion
 
 
         #region 判断是否登录
         protected bool IsLogined(string ip)
         {
-            m_isAdmin = false;
+            if (m_needLogin)
+                m_isAdmin = false;
 
             if (!m_needLogin)
             {
@@ -839,7 +852,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
         password:<input type='password' name='txtp'/><input type='submit'/>
         <hr/>
         请在本地Host设置如下域名后再访问（只允许192.168.*.*网段访问）<br/>
-        <span style='font-weight:bold;color:red;'>10.1.240.188 {5}</span><hr />
+        <span style='font-weight:bold;color:red;'>10.79.137.54 {5}</span><hr />
         QueryString:{0}<br/>
         Form:{1}<br/>
         RemoteIP:{2}
@@ -929,8 +942,25 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
         }
         protected void DelAdminServer()
         {
-            string id = Request.Form["id"];
-            string ret = AdminDal.DelAdminServer(id);
+            string ips = (Request.Form["id"] ?? "");
+            if (ips.Length == 0)
+            {
+                Response.Write("未提交数据");
+                return;
+            }
+            string sqlIps = String.Empty;
+            foreach (var ip in ips.Split(','))
+            {
+                string item = ip.Trim().Replace("'", "");
+                if (item.Length > 0)
+                {
+                    if(sqlIps.Length > 0)
+                        sqlIps += ",";
+
+                    sqlIps += "'" + item + "'";
+                }
+            }
+            string ret = AdminDal.DelAdminServer(sqlIps);
             Response.Write(ret);
         }
 

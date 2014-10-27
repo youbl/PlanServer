@@ -13,6 +13,13 @@ namespace PlanServerService
 {
     public static class TaskService
     {
+        public static string Version = "20141024";
+
+        static TaskService()
+        {
+            Output("当前版本:" + Version, "start");
+        }
+
         #region 字段与属性
         // 监听端口
         private static int _listenPort;
@@ -160,59 +167,6 @@ namespace PlanServerService
                 }
 
                 int ret;
-                if (task.immediate != ImmediateType.None)
-                {
-                    #region 需要立即处理的操作时
-
-                    switch (task.immediate)
-                    {
-                        case ImmediateType.Stop:
-                            ret = KillProcessByPath(task.exepath);
-                            if (ret > 0)
-                            {
-                                Output(task.desc + "立即停止完成", "immediate");
-                            }
-                            else
-                            {
-                                Output(task.desc + "程序未启动，无法立即停止", "immediate");
-                            }
-                            break;
-                        case ImmediateType.Start:
-                            // 查找进程是否运行中
-                            ret = FindProcessNumByPath(task.exepath);
-                            msg.Append("\r\n\t");
-                            if (ret <= 0)
-                            {
-                                // 启动进程
-                                StartProcess(task, dbaccess);
-                                Output(task.desc + "立即启动完成", "immediate");
-                            }
-                            else
-                            {
-                                Output(task.desc + "程序运行中，不用立即启动", "immediate");
-                            }
-                            break;
-                        case ImmediateType.ReStart:
-                            // 杀死并重启进程
-                            ret = KillProcessByPath(task.exepath);
-                            StartProcess(task, dbaccess);
-
-                            if (ret <= 0)
-                            {
-                                Output(task.desc + "立即重启完成", "immediate");
-                            }
-                            else
-                            {
-                                Output(task.desc + "立即重启完成（直接启动）", "immediate");
-                            }
-                            break;
-                    }
-                    dbaccess.ClearTaskImmediate(task.id);
-
-                    Thread.Sleep(TimeSpan.FromMilliseconds(100));
-
-                    #endregion
-                }
                 List<ProcessItem> processes;
                 switch (task.runtype)
                 {
@@ -363,8 +317,18 @@ namespace PlanServerService
                         msg.Append("\r\n\t");
                         if (ret <= 0)
                         {
-                            // 启动进程
-                            StartProcess(task, dbaccess);
+                            var lastRunMin = (now - task.pidtime).TotalMinutes;
+                            // 一直运行的，每2次启动必须间隔1分钟
+                            if (task.runtype == RunType.OneTime || lastRunMin > 1)
+                            {
+                                // 启动进程
+                                StartProcess(task, dbaccess);
+                                msg.Append("任务成功启动");
+                            }
+                            else
+                            {
+                                msg.Append("1分钟内任务只能启动1次");
+                            }
 
                             if (task.runtype == RunType.OneTime)
                             {
@@ -372,8 +336,6 @@ namespace PlanServerService
                                 dbaccess.UpdateTaskType(task.id, task.runtype, RunType.Stop);
                                 msg.Append("(只运行一次)");
                             }
-
-                            msg.Append("任务成功启动");
                         }
                         else
                         {
@@ -501,9 +463,17 @@ namespace PlanServerService
 
                                 if (ret <= 0)
                                 {
-                                    // 启动进程
-                                    StartProcess(task, dbaccess);
-                                    msg.Append("\r\n\t任务成功启动");
+                                    var lastRunMin = (now - task.pidtime).TotalMinutes;
+                                    if (lastRunMin > 1)
+                                    {
+                                        // 启动进程
+                                        StartProcess(task, dbaccess);
+                                        msg.Append("\r\n\t任务成功启动");
+                                    }
+                                    else
+                                    {
+                                        msg.Append("\r\n\t任务1分钟只能启动1次");
+                                    }
                                 }
                                 else
                                 {

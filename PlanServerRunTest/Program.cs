@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -8,9 +9,23 @@ namespace PlanServerRestart
 {
     class Program
     {
+        #region 常量与属性
         private const string RUN_ARG = "123";
+
+        private static string SourcePath = ConfigurationManager.AppSettings["SourcePath"];
+        private static string TargetPath = ConfigurationManager.AppSettings["TargetPath"];
+
+        private static bool CopySQLite;
+        #endregion
+
         static void Main(string[] arg)
         {
+            string tmp = ConfigurationManager.AppSettings["CopySQLite"];
+            if (!string.IsNullOrEmpty(tmp) && tmp.Equals("true", StringComparison.OrdinalIgnoreCase))
+                CopySQLite = true;
+
+            //string ss = CopyFile();
+            //return;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             string msg = string.Format("启动目录:{0}\r\n启动文件:{1}\r\n程序启动……\r\n",
               AppDomain.CurrentDomain.BaseDirectory,
@@ -23,8 +38,19 @@ namespace PlanServerRestart
                     case RUN_ARG:
                         WriteLog(msg + "开始停止计划任务服务");
                         OperationService(true);
-                        WriteLog("停止计划任务服务完成，等待5分钟");
-                        Thread.Sleep(TimeSpan.FromMinutes(5));
+                        WriteLog("停止计划任务服务完成，等待1分钟再复制文件");
+                        Thread.Sleep(TimeSpan.FromMinutes(1));
+
+                        WriteLog("开始复制文件");
+                        string error = CopyFile();
+                        if (!error.StartsWith("OK", StringComparison.Ordinal))
+                        {
+                            WriteLog("复制文件失败:" + error);
+                        }
+                        else
+                        {
+                            WriteLog("复制文件完成:" + error);
+                        }
                         WriteLog("开始启动计划任务服务");
                         OperationService(false);
                         WriteLog("启动计划任务服务完成，程序退出");
@@ -65,6 +91,50 @@ namespace PlanServerRestart
                 //MessageBox.Show(p.StandardOutput.ReadToEnd());
                 p.Close();
             }
+        }
+
+        static string CopyFile()
+        {
+            string target = TargetPath;
+            if (string.IsNullOrEmpty(target))
+            {
+                return "未配置目标目录";
+            }
+            if (!Directory.Exists(target))
+            {
+                return "目标目录不存在:" + target;
+            }
+
+            string source = SourcePath;
+            if (string.IsNullOrEmpty(source))
+            {
+                source = AppDomain.CurrentDomain.BaseDirectory;
+            }
+            if (!Directory.Exists(source))
+            {
+                return "源目录不存在:" + source;
+            }
+            int fileCnt = 0;
+            StringBuilder sb = new StringBuilder();
+            foreach (string file in Directory.GetFiles(source))
+            {
+                // 不复制Sqlite的dll，避免32位问题
+                if (!CopySQLite && file.EndsWith("SQLite.dll", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string tfile = Path.Combine(target, Path.GetFileName(file) ?? "");
+                try
+                {
+                    File.Copy(file, tfile, true);
+                    fileCnt++;
+                    sb.AppendFormat("{0}=>{1}\r\n", file, tfile);
+                }
+                catch (Exception exp)
+                {
+                    return file + "=>" + tfile + "\r\n" + exp;
+                }
+            }
+            return "OK copy files:" + fileCnt.ToString() + "\r\n" + sb;
         }
 
         static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)

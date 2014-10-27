@@ -234,24 +234,23 @@ select @ip, id, @desc, @insip from Servers where ip=@sip";
             return ret.ToString();
         }
 
-        public static string DelAdminServer(string id)
+        public static string DelAdminServer(string ips)
         {
             StringBuilder ret = new StringBuilder("<span style='color:red;'>");
-            var para = new SQLiteParameter("@id", DbType.Int32) { Value = id };
 
-            string sql = "delete from IpRight where serverid=@id";
-            var n = SQLiteHelper.ExecuteNonQuery(DbPath, sql, para);
-            ret.AppendFormat("删除{0}条权限记录,id:{1}", n.ToString(), id);
+            string sql = "delete from IpRight where serverid in (select id from Servers where ip in (" + ips + "))";
+            var n = SQLiteHelper.ExecuteNonQuery(DbPath, sql);
+            ret.AppendFormat("删除{0}条权限记录,", n.ToString());
 
-            sql = "delete from Servers where id=@id";
-            n = SQLiteHelper.ExecuteNonQuery(DbPath, sql, para);
+            sql = "delete from Servers where ip in (" + ips + ")";
+            n = SQLiteHelper.ExecuteNonQuery(DbPath, sql);
             if (n > 0)
             {
-                ret.AppendFormat("删除{0}条服务器记录,id:{1}", n.ToString(), id);
+                ret.AppendFormat("删除{0}条服务器记录:{1}", n.ToString(), ips);
             }
             else
             {
-                ret.AppendFormat("未找到服务器记录:{0}", id);
+                ret.AppendFormat("未找到服务器记录:{0}", ips);
             }
             ret.Append("</span>");
             ret.Append(GetAllServerTable());
@@ -276,5 +275,17 @@ select @ip, id, @desc, @insip from Servers where ip=@sip";
         #endregion
 
 
+        public static string RunSql(string sql)
+        {
+            using (var reader = SQLiteHelper.ExecuteReader(DbPath, sql))
+            {
+                if (!reader.HasRows)
+                    return "无数据返回";
+                GridView gv1 = new GridView();
+                gv1.DataSource = reader;
+                gv1.DataBind();
+                return Common.GetHtml(gv1);
+            }
+        }
     }
 }

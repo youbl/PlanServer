@@ -51,7 +51,7 @@ function refreshServerIP() {
                 lastDesc = desc;
                 html += "<tr onmouseover='onRowOver(this);' onmouseout='onRowOut(this);' onclick='onRowClick(this);'><th><label><input type='checkbox' onclick='checkProjectAll(this);'/>" + desc + ":</label></th><td>";
             }
-            html += "<label><input type='checkbox' value='" + ip + "' onclick='serverClick(this);'/>" + ip + "</label>　";
+            html += "<label><input type='checkbox' value='" + ip + "' onclick='serverClick(this);'/>" + ip + "</label><a href='http://" + ip + "/' target='_blank'>…</a>　";
         }
         html += "</table>";
         $("#spnAdminServers").html(html);
@@ -73,7 +73,30 @@ function addAdminServer() {
     ajaxSend(para, 2051, function (backdata) {
         var id = "divAdminServers";
         $("#" + id).html(backdata);
-        addAdminDel(id);
+        refreshServerIP();
+    });
+}
+
+function delAdminServer() {
+    var sip = "";
+    var num = 0;
+    $("#spnAdminServers input:checked").each(function () {
+        sip += $(this).val() + ",";
+        num++;
+    });
+    if (num == 0) {
+        alert("请选择服务器IP");
+        return;
+    }
+    if (!confirm("您确实要删除这" + num + "条服务器记录吗？相应的权限记录也会被删除\n" + sip)) {
+        return;
+    }
+    var para = {};
+    para.id = sip;
+    ajaxSend(para, 2052, function (backdata) {
+        var id = "divAdminServers";
+        $("#" + id).html(backdata);
+        refreshServerIP();
     });
 }
 
@@ -108,7 +131,7 @@ function addAdminIP() {
 function addAdminDel(id) {
     var isServer;
     if (id == "divAdminServers") {
-        isServer = true;
+        return;// 服务器不做处理
     } else {//if (id == "divAdminIp") {
         isServer = false;
     }
@@ -155,7 +178,7 @@ function delAdminIp(obj) {
     if (id2 == "divAdminIp")
         flg = 2050;
     else
-        flg = 2052;
+        return;
     ajaxSend(para, flg, function (backdata) {
         div.html(backdata);
         addAdminDel(id2);

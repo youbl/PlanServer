@@ -22,7 +22,7 @@ namespace PlanServerService
             else
                 IsDebug = false;
 
-            tmp = ConfigurationManager.AppSettings["WritePath"];
+            tmp = ConfigurationManager.AppSettings["PlanWritePath"];
             if (!string.IsNullOrEmpty(tmp))
                 TmpDir = tmp;
             else

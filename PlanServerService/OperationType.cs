@@ -122,5 +122,11 @@
         /// 获取进程列表
         /// </summary>
         GetProcesses = 3000,
+
+
+        /// <summary>
+        /// 执行SQL
+        /// </summary>
+        RunSql = 4444,
     }
 }

@@ -79,15 +79,15 @@
         $().ready(function () {
             //先在页面创建一个层
             var jqtip = $("<div id='jqtip20130719'" +
-            "style='padding: 10px; " +
-            "border: 1px solid red;" +
-            "background-color: white; " +
-            "position: absolute; " +
-            "z-index:10001;" +
-            "display: none; " +
-            "font-family: 宋体; " +
-            "font-size: 12px'>fafsdfsa" +
-            "</div>");
+                "style='padding: 10px; " +
+                "border: 1px solid red;" +
+                "background-color: white; " +
+                "position: absolute; " +
+                "z-index:10001;" +
+                "display: none; " +
+                "font-family: 宋体; " +
+                "font-size: 12px'>fafsdfsa" +
+                "</div>");
             $(document.body).append(jqtip);
 
             // 初始化标签
@@ -101,7 +101,6 @@
                     hideDialog();
             });
             
-            addAdminDel("divAdminServers");
             addAdminDel("divAdminIp");
             refreshServerIP();
         });
@@ -156,6 +155,9 @@
         <li class=""><a href="#fragment4"><span>权限管理</span></a></li>
         <%} %>
         <li class=""><a href="#fragment5"><span>进程查看</span></a></li>
+        <%if (m_enableSql){%>
+        <li class=""><a href="#fragment6"><span>Sqlite维护</span></a></li>
+        <%} %>
     </ul>
     <!-- 计划任务管理 -->
     <div style="display: block;" class="ui-tabs-panel ui-tabs-hide" id="fragment1">
@@ -166,11 +168,11 @@
         <pre>
 计划任务程序使用说明（<a href="http://<%=m_domain %>/planService.rar">64位程序下载</a>｜<a href="http://<%=m_domain %>/planService_Win32.rar">32位程序下载</a>）：
     1、拷贝程序到服务器上，然后执行目录下的installService.bat，安装服务，安装完成后服务会自动启动；
-    2、开通这台服务器的23244端口入站权限，开给web管理机ip：10.1.240.188 
-       外网服务器要开给web管理机的外网ip：121.207.240.188
+    2、开通这台服务器的23244端口入站权限，开给web管理机ip：10.79.137.54 
+       外网服务器要开给web管理机的外网ip：59.56.21.35
     3、把服务器的ip和你的个人电脑ip提交给管理员，让管理员添加个人ip对服务器的管理权限
     4、设置HOST
-       10.1.240.188 <%=m_domain %> 
+       10.79.137.54 <%=m_domain %> 
     5、管理计划任务，进入页面：http://<%=m_domain %>/planadmin.aspx
        在“读取任务”按钮左侧的文本框内输入服务器ip，点击“读取任务”即可
     注意：请参考程序目录下的exe.Config文件里的注释说明，以开通或关闭文件管理等功能
@@ -263,6 +265,8 @@
     <div class="ui-tabs-panel ui-tabs-hide" id="fragment3">
         说明:<input type="text" id="txtAdminServerDesc" style="width:200px;" value="" size="50"/>　
         服务器IP:<input type="text" id="txtAdminServer" style="width:300px;" value="10.1.240.1"/><br/>
+        <input type="button" value="刷新上面显示的服务器清单" onclick="refreshServerIP()"/>　
+        <input type="button" value="删除上面勾选的服务器" onclick="delAdminServer()"/>　
         <input type="button" value="添加" onclick="addAdminServer()"/>　
         多个服务器ip以分号分隔
         <hr/>
@@ -290,6 +294,28 @@
         <div id="divProcess"></div>
     </div>
 
+    <%if (m_enableSql){%>
+    <!-- Sqlite维护 -->
+    <div class="ui-tabs-panel ui-tabs-hide" id="fragment6">
+        <textarea id="txtSql" style="width:1000px; height: 200px;"></textarea><br/>
+        <input type="button" value="执行SQL" onclick="doSql()"/>
+        <hr/>
+        <div id="divSql"></div>
+    </div>
+    <script type="text/javascript">
+        function doSql() {
+            var sql = $.trim($("#txtSql").val());
+            if (sql.length == 0)
+                return;
+            var para = {};
+            para.sql = sql;
+            $("#divSql").html('加载中...');
+            ajaxSend(para, 4444, function (backdata) {
+                $("#divSql").html(backdata);
+            });
+        }
+    </script>
+    <%} %>
 </div>
     
 <div class="jqmWindow" id="dialog">
