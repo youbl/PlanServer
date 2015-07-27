@@ -117,6 +117,7 @@
         AddAdminServer = 2051,
         DelAdminServer = 2052,
         GetAdminServers = 2053,
+        GetAdminListServers = 2054,
 
         /// <summary>
         /// 获取进程列表

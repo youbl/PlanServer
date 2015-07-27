@@ -58,6 +58,15 @@ function refreshServerIP() {
     });
 }
 
+function refreshServerList() {
+    var para = {};
+    ajaxSend(para, 2054, function (backdata) {
+        var id = "divAdminServers";
+        $("#" + id).html(backdata);
+        refreshServerIP();
+    });
+}
+
 function addAdminServer() {
     var para = {};
     para.sip = $("#txtAdminServer").val();

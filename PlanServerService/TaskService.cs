@@ -1239,6 +1239,7 @@ namespace PlanServerService
                 SubFiles = files.ToArray(),
                 ServerTime = DateTime.Now,
                 ServerIp = Common.GetServerIpList(),
+                Others = GetDriveInfo(dirPath),
             };
             return Common.XmlSerializeToStr(ret);
         }
@@ -1606,6 +1607,35 @@ namespace PlanServerService
             File.Move(recievedFilePath, savePath);
             return "ok";
         }
+
+        /// <summary>
+        /// 返回指定目录的分区信息
+        /// </summary>
+        /// <param name="dirPath"></param>
+        /// <returns></returns>
+        static string GetDriveInfo(string dirPath)
+        {
+            DriveInfo info = new DriveInfo(dirPath);
+            return string.Format("{2} free/total:{0}/{1}",
+                CountSize(info.AvailableFreeSpace),
+                CountSize(info.TotalSize),
+                info.DriveFormat);
+        }
+        static string CountSize(long size)
+        {
+            if (size <= 0)
+                return "0B";
+            string[] unit = { "B", "KB", "MB", "GB", "TB", "PB", "EB" };
+            int idxUnit = 0;
+            double dsize = size;
+            while (dsize >= 1024 && idxUnit < unit.Length - 1)
+            {
+                dsize = dsize / 1024;
+                idxUnit++;
+            }
+            string showsize = dsize.ToString("F2").TrimEnd('0').TrimEnd('.');
+            return string.Format("{0}{1}", showsize, unit[idxUnit]);
+        }  
         #endregion
 
 

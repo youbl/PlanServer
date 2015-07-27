@@ -127,7 +127,7 @@ insip varchar(100) not null
         #region 维护权限列表相关方法
         public static string GetAllServerTable()
         {
-            string sql = @"select a.*,'' del from Servers a order by a.desc,a.ip";
+            string sql = @"select a.* from Servers a order by a.desc,a.ip";
             using (var reader = SQLiteHelper.ExecuteReader(DbPath, sql))
             {
                 if (!reader.HasRows)
@@ -275,9 +275,9 @@ select @ip, id, @desc, @insip from Servers where ip=@sip";
         #endregion
 
 
-        public static string RunSql(string sql)
+        public static string RunSql(string db, string sql)
         {
-            using (var reader = SQLiteHelper.ExecuteReader(DbPath, sql))
+            using (var reader = SQLiteHelper.ExecuteReader(db, sql))
             {
                 if (!reader.HasRows)
                     return "无数据返回";

@@ -35,6 +35,11 @@ namespace PlanServerService.FileAdmin
         /// </summary>
         [DataMember(EmitDefaultValue = false, IsRequired = false, Name = "p")]
         public string ServerIp { get; set; }
+        /// <summary>
+        /// 服务器其它信息，如磁盘空间
+        /// </summary>
+        [DataMember(EmitDefaultValue = false, IsRequired = false, Name = "o")]
+        public string Others { get; set; }
 
     }
 }

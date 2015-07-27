@@ -121,6 +121,7 @@ namespace PlanServerTaskManager.Web
                             break;
                         #endregion
 
+
                         #region 服务器和权限管理
                         case OperationType.AddAdminIp:
                             AddAdminIp();
@@ -136,6 +137,9 @@ namespace PlanServerTaskManager.Web
                             break;
                         case OperationType.GetAdminServers:
                             GetAdminServers();
+                            break;
+                        case OperationType.GetAdminListServers:
+                            GetAdminServerList();
                             break;
                         #endregion
 
@@ -383,8 +387,12 @@ namespace PlanServerTaskManager.Web
                 Response.Write(msg);
                 return;
             }
-            StringBuilder sbRet = new StringBuilder("<span style='font-weight:bold;color:red;'>" + result.SubDirs.Length
-                + " dirs, " + result.SubFiles.Length + " files. server time:" + result.ServerTime.ToString("yyyy-MM-dd HH:mm:ss_fff"));
+            StringBuilder sbRet = new StringBuilder("<span style='font-weight:bold;color:red;'>");
+            sbRet.AppendFormat("{0} dirs, {1} files. server time:{2}. {3}", 
+                result.SubDirs.Length.ToString(),
+                result.SubFiles.Length.ToString(),
+                result.ServerTime.ToString("yyyy-MM-dd HH:mm:ss_fff"),
+                result.Others);
 
             string parentDir = (Path.GetDirectoryName(maindir) ?? "").Replace(@"\", @"\\");
             string rootDir = maindir.Length > 3 ? maindir.Substring(0, 2) : "";
@@ -764,13 +772,44 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
 
         void RunSql()
         {
-            string sql = Request.Form["sql"];
-            Response.Write(AdminDal.RunSql(sql));
+            string sql = (Request.Form["sql"] ?? "").Trim();
+            string db = (Request.Form["db"] ?? "").Trim();
+            if (db == string.Empty || sql == string.Empty)
+            {
+                Response.Write("db或sql不能为空");
+                return;
+            }
+            if (!File.Exists(db))
+            {
+                Response.Write("db不存在:" + db);
+                return;
+            }
+            Response.Write(AdminDal.RunSql(db, sql));
         }
         #endregion
 
 
         #region 判断是否登录
+        static string[] _whiteIp;
+        static string[] WhiteIp
+        {
+            get
+            {
+                if (_whiteIp == null)
+                {
+                    List<string> ret = new List<string>();
+                    string ip = ConfigurationManager.AppSettings["PlanWhiteIP"] ?? "";
+                    foreach (string item in ip.Split(',', ';', '|'))
+                    {
+                        string tmp = item.Trim();
+                        if(tmp != string.Empty)
+                            ret.Add(tmp);
+                    }
+                    _whiteIp = ret.ToArray();
+                }
+                return _whiteIp;
+            }
+        }
         protected bool IsLogined(string ip)
         {
             if (m_needLogin)
@@ -782,12 +821,21 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
             }
 
             // 是否内网ip
-            bool isInner = ip.StartsWith("192.168.") || ip.StartsWith("172.16.") || ip.StartsWith("10.") ||
+            bool isInner = ip.StartsWith("192.168.") ||
+                ip.StartsWith("172.16.") || ip.StartsWith("172.17.") || ip.StartsWith("172.18.") || ip.StartsWith("172.19.") || 
+                ip.StartsWith("10.") ||
                 ip.StartsWith("127.") || ip == "::1";
                 //ip.StartsWith("121.207.242") || ip.StartsWith("121.207.240") || ip.StartsWith("121.207.254") ||
                 //ip.StartsWith("58.22.103.") || ip.StartsWith("58.22.105.") || ip.StartsWith("58.22.107.") ||
-            bool isCompany = ip == "218.5.2.219" || ip == "220.250.21.82" || ip == "110.87.60.97";
-
+            bool isCompany = false;
+            foreach (string item in WhiteIp)
+            {
+                if (ip.StartsWith(item))
+                {
+                    isCompany = true;
+                    break;
+                }
+            }
             string str = Request.Form["txtp"]; //GetSession("p");
             if (!string.IsNullOrEmpty(str))
             {
@@ -968,6 +1016,12 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
         {
             Response.Write(AdminDal.GetAdminServers());
         }
+        protected void GetAdminServerList()
+        {
+            string ret = AdminDal.GetAllServerTable();
+            Response.Write(ret);
+        }
+
         #endregion
 
         #region 通用方法

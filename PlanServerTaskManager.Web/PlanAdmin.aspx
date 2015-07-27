@@ -102,8 +102,10 @@
             });
             
             addAdminDel("divAdminIp");
+            // 列出所有服务器，允许勾选
             refreshServerIP();
         });
+
         (function (window, undefined) {
             var tips = {
                 init:function(callback){
@@ -156,7 +158,7 @@
         <%} %>
         <li class=""><a href="#fragment5"><span>进程查看</span></a></li>
         <%if (m_enableSql){%>
-        <li class=""><a href="#fragment6"><span>Sqlite维护</span></a></li>
+        <li class=""><a href="#fragment6"><span>127.0.0.1的Sqlite维护</span></a></li>
         <%} %>
     </ul>
     <!-- 计划任务管理 -->
@@ -265,7 +267,7 @@
     <div class="ui-tabs-panel ui-tabs-hide" id="fragment3">
         说明:<input type="text" id="txtAdminServerDesc" style="width:200px;" value="" size="50"/>　
         服务器IP:<input type="text" id="txtAdminServer" style="width:300px;" value="10.1.240.1"/><br/>
-        <input type="button" value="刷新上面显示的服务器清单" onclick="refreshServerIP()"/>　
+        <input type="button" value="刷新上面显示的服务器清单" onclick="refreshServerIP();refreshServerList();"/>　
         <input type="button" value="删除上面勾选的服务器" onclick="delAdminServer()"/>　
         <input type="button" value="添加" onclick="addAdminServer()"/>　
         多个服务器ip以分号分隔
@@ -297,6 +299,7 @@
     <%if (m_enableSql){%>
     <!-- Sqlite维护 -->
     <div class="ui-tabs-panel ui-tabs-hide" id="fragment6">
+        db路径:<input type="text" id="txtDBP" value="e:\upload\planserver\planserver.db" style="width:900px"/>
         <textarea id="txtSql" style="width:1000px; height: 200px;"></textarea><br/>
         <input type="button" value="执行SQL" onclick="doSql()"/>
         <hr/>
@@ -309,6 +312,7 @@
                 return;
             var para = {};
             para.sql = sql;
+            para.db = $.trim($("#txtDBP").val());
             $("#divSql").html('加载中...');
             ajaxSend(para, 4444, function (backdata) {
                 $("#divSql").html(backdata);
