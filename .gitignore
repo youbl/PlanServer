@@ -16,3 +16,5 @@
 /PlanServer.sln.ide/graph/PlanServer.sln.ide
 /PlanServer.v11.suo
 /PlanServer.v12.suo
+/PlanServerTaskManager.Web/PlanServerTaskManager.Web.csproj.user
+/.vs

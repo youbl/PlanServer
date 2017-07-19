@@ -34,7 +34,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data.SQLite">
-      <HintPath>..\..\..\通用Dll\其他\System.Data.SQLite.DLL</HintPath>
+      <HintPath>..\dll\Sqlite64\System.Data.SQLite.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />

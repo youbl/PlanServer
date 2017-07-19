@@ -33,18 +33,18 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ICSharpCode.SharpZipLib">
-      <HintPath>..\..\..\通用Dll\其他\ICSharpCode.SharpZipLib.dll</HintPath>
+      <HintPath>..\dll\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
     <Reference Include="NLog, Version=1.0.0.505, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\通用Dll\常用Dll\NLog.dll</HintPath>
+      <HintPath>..\dll\NLog.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
     <Reference Include="System.Data.SQLite, Version=1.0.92.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>E:\nd\发布\ressearchAdmin.sj.91.com\bin\System.Data.SQLite.DLL</HintPath>
+      <HintPath>..\dll\Sqlite64\System.Data.SQLite.dll</HintPath>
     </Reference>
     <Reference Include="System.Management" />
     <Reference Include="System.Runtime.Serialization" />
@@ -52,6 +52,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Ext\StringExtensions.cs" />
+    <Compile Include="SerializeHelper.cs" />
     <Compile Include="SocketCommon.cs" />
     <Compile Include="FileAdmin\FileResult.cs" />
     <Compile Include="SortType.cs" />
