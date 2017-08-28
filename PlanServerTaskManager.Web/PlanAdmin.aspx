@@ -41,96 +41,19 @@
             width: 100px;
         }
     </style>
-    <style type="text/css">
-        .jqmWindow {
-            display: none;    
-            position: fixed;
-            top: 17%;
-            left: 50%;    
-            margin-left: -300px;
-            width: 600px;    
-            background-color: #EEE;
-            color: #333;
-            border: 1px solid black;
-            padding: 12px;
-            z-index: 500;
-        }
-        .jqmOverlay { background-color: #000; }
-    </style>
-	<link rel="stylesheet" href="http://bcs.91rb.com/rbpiczy/client91_cache/jquery/jqModal.css" />
+    <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/jq_125bece.js"></script>
+    
+    <link rel="stylesheet" href="https://ascdn.bdstatic.com/fz_act/js/jquery-ui-min.css">
+       <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/jquery-ui-min.js"></script>
 
-    <script type="text/javascript" src="http://bcs.91rb.com/rbpiczy/client91_cache/jquery/jquery-1.7.2.min.js"></script>
-    <script type="text/javascript" src="http://bcs.91rb.com/rbpiczy/client91_cache/jquery/jqModal.js"></script>
+    <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/ui.tabs_d89ad1a.js"></script>
+    <link rel="stylesheet" href="https://ascdn.bdstatic.com/fz_act/css/ui.tabs_2b0cf63.css" type="text/css" />
 
-    <script type="text/javascript" src="http://bcs.91rb.com/rbpiczy/client91_cache/ui.tabs/ui.tabs.js"></script>
-    <link rel="stylesheet" href="http://bcs.91rb.com/rbpiczy/client91_cache/ui.tabs/ui.tabs.css" type="text/css" media="print, projection, screen" />
-
-    <script type="text/javascript" src="http://bcs.91rb.com/rbpiczy/client91_cache/other/rowColor.js"></script>
+    <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/rowColor_666490a.js"></script>
 
     <script type="text/javascript" src="PlanAdmin.js"></script>
     <script type="text/javascript" src="PlanFileAdmin.js"></script>
     <script type="text/javascript" src="PlanAdminOther.js"></script>
-    <script type="text/javascript">
-        // 修改行默认颜色，醒目一点，避免点错
-        var __colorOver = '#c25066'; //鼠标进入时行的颜色
-        var __colorOut = '#ffffff'; //鼠标离开时行的颜色
-        var __colorClick = '#fd8d89'; //鼠标单击时行的颜色
-
-        $().ready(function () {
-            //先在页面创建一个层
-            var jqtip = $("<div id='jqtip20130719'" +
-                "style='padding: 10px; " +
-                "border: 1px solid red;" +
-                "background-color: white; " +
-                "position: absolute; " +
-                "z-index:10001;" +
-                "display: none; " +
-                "font-family: 宋体; " +
-                "font-size: 12px'>fafsdfsa" +
-                "</div>");
-            $(document.body).append(jqtip);
-
-            // 初始化标签
-            (new UI_TAB()).init("container-1");
-
-            // 初始化对话框
-            $('#dialog').jqm({ modal: true });
-            
-            $(document).keyup(function(event) {
-                if(event.which == 27)// 按下esc
-                    hideDialog();
-            });
-            
-            addAdminDel("divAdminIp");
-            // 列出所有服务器，允许勾选
-            refreshServerIP();
-        });
-
-        (function (window, undefined) {
-            var tips = {
-                init:function(callback){
-                    $("[title]").css({
-                        'cursor': 'help'
-                    }).bind("focus", function () {
-                        var tit = this.getAttribute('title');
-                        this.setAttribute('msg', tit);
-                        this.setAttribute('title', '');
-                        $("#jqtip20130719").html(tit).css({
-                            'left': $(this).position().left,
-                            'top': $(this).position().top + 20
-                        }).show();
-                    });
-                    $("[title]").bind("blur", function () {
-                        this.setAttribute('title', this.getAttribute('msg'));
-                        $("#jqtip20130719").hide();
-                        if (callback)
-                            callback();
-                    });
-                }
-            };
-            window.tip = tips;
-        })(window);
-    </script>
 </head>
 <body style='font-size:13px;'>
     <asp:Label runat="server" Visible="False" ID="labCommon" Text="657541DB7DDE258FE2C905B1B361A039"></asp:Label>
@@ -323,8 +246,6 @@
 </div>
     
 <div class="jqmWindow" id="dialog">
-    <a href="javascript:void(0);" class="jqmClose" id="dialogCancel">取消</a>　<a href="javascript:void(0);" id="dialogConfirm">确定</a>
-    <hr />
     <div id="dialogContent"></div>
 </div>
 

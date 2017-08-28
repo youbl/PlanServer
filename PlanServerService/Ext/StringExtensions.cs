@@ -1164,28 +1164,6 @@ namespace PlanServerService.Ext
                     return defaultContentType;
             }
         }
-
-        /// <summary>
-        /// 域名替换
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="srcDomain">替换掉的域名：默认为bcs.91rb.com</param>
-        /// <param name="destDomain">替换后的域名：默认为bcs.91.com</param>
-        /// <returns></returns>
-        public static string Replace91rbDomainTo91(this string url, string srcDomain = "bcs.91rb.com", string destDomain = "bcs.91.com")
-        {
-            return url.Replace(srcDomain, destDomain);
-        }
-        /// <summary>
-        /// 域名替换，目前给IOS未授权软件用
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="srcDomain">替换掉的域名：默认为bcs.91rb.com</param>
-        /// <param name="destDomain">替换后的域名：默认为bcs.kuaiapk.com</param>
-        /// <returns></returns>
-        public static string Replace91rbDomainToKuaiapk(this string url, string srcDomain = "bcs.91rb.com", string destDomain = "bcs.kuaiapk.com")
-        {
-            return url.Replace(srcDomain, destDomain);
-        }
+        
     }
 }

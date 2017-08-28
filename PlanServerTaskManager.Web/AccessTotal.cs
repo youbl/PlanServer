@@ -145,16 +145,23 @@ namespace PlanServerTaskManager.Web
 
             while (true)
             {
-                SaveAll();
-
-                if (Update != null)
+                try
                 {
-                    Update();
+                    SaveAll();
+
+                    if (Update != null)
+                    {
+                        Update();
+                    }
+
+                    if (OtherStat != null)
+                    {
+                        OtherStat();
+                    }
                 }
-
-                if (OtherStat != null)
+                catch (Exception exp)
                 {
-                    OtherStat();
+                    LogHelper.WriteException("保存统计异常1:" + exp.Message, null);
                 }
 
                 Thread.Sleep(_saveDiffTime);

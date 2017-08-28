@@ -1,4 +1,31 @@
-﻿var typeoption = "<select>" +
+﻿
+// 修改行默认颜色，醒目一点，避免点错
+var __colorOver = '#c25066'; //鼠标进入时行的颜色
+var __colorOut = '#ffffff'; //鼠标离开时行的颜色
+var __colorClick = '#fd8d89'; //鼠标单击时行的颜色
+
+
+$().ready(function () {
+    // 初始化tab标签
+    (new UI_TAB()).init("container-1");
+
+    // 初始化弹出的对话框
+    $('#dialog').dialog({
+        autoOpen: false,
+        modal: true
+    });
+
+    $(document).keyup(function (event) {
+        if (event.which === 27)// 按下esc
+            hideDialog();
+    });
+
+    addAdminDel("divAdminIp");
+    // 列出所有服务器，允许勾选
+    refreshServerIP();
+});
+
+var typeoption = "<select>" +
             "<option value='0'>不启动</option>" +
             "<option value='8'>停止进程</option>" +
             "<option value='1'>只运行一次</option>" +
@@ -274,11 +301,6 @@ function readDb(flg) {
             td.html(typeoption);
             td.find("select").val(td.attr("v"));
         });
-        
-
-        //初始化提示菜单
-        tip.init();
-        
     });
 }
 
@@ -379,7 +401,7 @@ function addrow(obj) {
                 "<td><input type='text' style='width:97%;' /></td>" +   // exe路径
                 "<td><input type='text' style='width:92%;' /></td>" +   // exe参数
                 "<td>" + typeoption + "</td>" +   // 运行类型
-                "<td><input type='text' style='width:97%;' onfocus='setPara(this)' readonly='readonly' /></td>" +   // 任务参数
+                "<td><input type='text' style='width:97%;' onclick='setPara(this)' readonly='readonly' /></td>" +   // 任务参数
                 "<td><a href='#-1' onclick='saverow(-1,this,1);'>保存</a>&nbsp;<a href='javascript:void(0);' onclick='delrow(-1,this,2);'>删除</a>";
     
     tr.after("<tr>" + newrow + "</tr>");
@@ -439,7 +461,7 @@ function runMethodOpen(obj, flg) {
     showDialog(row ,function () {
         var m = $.trim($("#txtMethod").val());
 
-        if (m.length == 0) {
+        if (m.length === 0) {
             alert("没有设置方法名");
             return;
         }
@@ -456,7 +478,7 @@ function runMethodOpen(obj, flg) {
 
 function ajaxSend(para, flg, callback, dataType) {
     para.flg = flg;
-    showDialog("<span style='color:blue;font-size:20px;'>请稍候……</span>", null, false, false);
+    showDialog("<span style='color:blue;font-size:20px;'>请稍候……</span>");
     if (dataType == undefined)
         dataType = "text";
     
@@ -488,27 +510,27 @@ function ajaxError(httpRequest, textStatus, errorThrown) {
     hideDialog();
     alert(textStatus + errorThrown);
 }
-function showDialog(html, confirmClick, showConfirm, showCancel) {
+function showDialog(html, confirmClick) {
     $("#dialogContent").html(html);
 
-    if (showConfirm != undefined && !showConfirm) {
-        $("#dialogConfirm").hide();
-    }else{
-        $("#dialogConfirm").show().unbind("click").click(function() {
-            if (confirmClick != null)
-                confirmClick();
-            hideDialog();
+    if (confirmClick) {
+        $('#dialog').dialog('option', 'width', 600);
+        $('#dialog').dialog('option', 'height', 300);
+        $('#dialog').dialog('option', 'buttons', {
+            "确认按钮": confirmClick,
+            Cancel: function() {
+                hideDialog();
+            }
         });
-    }
-    if (showCancel != undefined && !showCancel) {
-        $("#dialogCancel").hide();
     } else {
-        $("#dialogCancel").show();
+        $('#dialog').dialog('option', 'buttons', []);
+        $('#dialog').dialog('option', 'width', 200);
+        $('#dialog').dialog('option', 'height', 100);
     }
-    $("#dialog").jqmShow();
+    $("#dialog").dialog('open');
 }
 function hideDialog() {
-    $("#dialog").jqmHide();
+    $("#dialog").dialog('close');
 }
 
 
@@ -613,7 +635,7 @@ function setPara(obj) {
     showDialog(row, function () {
         var para = $("#valEnd").val();
 
-        if (para.length == 0) {
+        if (para.length === 0) {
             alert("没有设置运行参数，参数将配置为空");
         }
         $(obj).val(para);

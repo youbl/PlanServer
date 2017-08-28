@@ -10,7 +10,7 @@ namespace PlanServerService
 {
     public static class AdminDal
     {
-        private const string _adminDbPath = @"e:\upload\planserver\admin.db";
+        private static string _adminDbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"admin.db");
 
         #region 服务器权限管理相关方法
         public static List<string> GetServers(string loginIp)
@@ -268,7 +268,10 @@ select @ip, id, @desc, @insip from Servers where ip=@sip";
                     str.AppendFormat("['{0}','{1}'],", reader["ip"], reader["desc"]);
                 }
             }
-            str.Remove(str.Length - 1, 1);
+            if (str.Length > 1)
+            {
+                str.Remove(str.Length - 1, 1);
+            }
             str.Append("]");
             return str.ToString();
         }

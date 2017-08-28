@@ -346,7 +346,7 @@ namespace PlanServerTaskManager.Web
     <td><div class='input-2'><input type='text' title='{2}' style='width:97%;' value='{2}' /></div></td>
     <td><input type='text' style='width:92%;' value='{3}' /></td>
     <td v='{4}'></td>
-    <td><div class='input-3'><input type='text' title='{5}' style='width:97%;' value='{5}' onfocus='setPara(this);' readonly='readonly' /></div></td>
+    <td><div class='input-3'><input type='text' title='{5}' style='width:97%;' value='{5}' onclick='setPara(this);' readonly='readonly' /></div></td>
     <td><a href='#{0}' onclick='saverow({0},this,1);'>存</a>|<a href='javascript:void(0);' onclick='delrow({0},this,2);'>删</a></td>
     <td><a href='#{0}' onclick='operateImm(this,1,3);'>启</a>|<a href='javascript:void(0);' onclick='operateImm(this,2,3);'>停</a>|<a href='javascript:void(0);' onclick='operateImm(this,3,3);' title='停止并重启任务'>重</a></td>
     <td title='最近pid:{7}；创建时间:{9}；累计启动次数:{6}'>{10}</td>
