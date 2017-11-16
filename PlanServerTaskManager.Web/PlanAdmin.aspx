@@ -56,15 +56,15 @@
     <script type="text/javascript" src="PlanAdminOther.js"></script>
 </head>
 <body style='font-size:13px;'>
-    <asp:Label runat="server" Visible="False" ID="labCommon" Text="657541DB7DDE258FE2C905B1B361A039"></asp:Label>
-    <asp:Label runat="server" Visible="False" ID="labCommonOther" Text="82cc60100fa1557bf1f2b6eb0acea502"></asp:Label>
-    <asp:Label runat="server" Visible="False" ID="labMainInner" Text="8f13267a0d8a9ea0b964e7b5e7b36eb5"></asp:Label>
-    <asp:Label runat="server" Visible="False" ID="labMainOuter" Text="ec5f9004ed85f9ef895d80a3f050098b"></asp:Label>
+    <asp:Label runat="server" Visible="False" ID="labCommon" Text="aaa"></asp:Label>
+    <asp:Label runat="server" Visible="False" ID="labCommonOther" Text="4c3e1ec04215f69d6a8e9c023c9e4572"></asp:Label>
+    <asp:Label runat="server" Visible="False" ID="labMainInner" Text="1cc94f558046754d7f9b1ae2af8cb78a"></asp:Label>
+    <asp:Label runat="server" Visible="False" ID="labMainOuter" Text="xxx"></asp:Label>
 <div>
     <div style="background-color:greenyellow">
         <label><input type="checkbox" onclick="chkAll(this);" />全选服务器</label>
         <label><input type="checkbox" id="chkOne" onclick="doCheckOne(this);" checked="checked"/>只允许单选</label>
-　　      |Web服务器ip：<%=m_localIp%>
+　　      |Web服务器ip：<%=m_localIp%>|访客ip：<%=m_remoteIpLst %>
           |<a href="javascript:void(0);" onclick="logout();">重新登录</a>
     </div>
     <div id="spnAdminServers"></div>
@@ -74,8 +74,8 @@
 <div id="container-1">
     <ul class="ui-tabs-nav">
         <li class="ui-tabs-selected"><a href="#fragment1"><span>计划任务管理</span></a></li>
-        <li class=""><a href="#fragment2"><span>文件管理</span></a></li>
         <%if (m_isAdmin){%>
+        <li class=""><a href="#fragment2"><span>文件管理</span></a></li>
         <li class=""><a href="#fragment3"><span>服务器列表管理</span></a></li>
         <li class=""><a href="#fragment4"><span>权限管理</span></a></li>
         <%} %>
@@ -93,11 +93,11 @@
         <pre>
 计划任务程序使用说明（<a href="http://<%=m_domain %>/planService.rar">64位程序下载</a>｜<a href="http://<%=m_domain %>/planService_Win32.rar">32位程序下载</a>）：
     1、拷贝程序到服务器上，然后执行目录下的installService.bat，安装服务，安装完成后服务会自动启动；
-    2、开通这台服务器的23244端口入站权限，开给web管理机ip：10.79.137.54 
-       外网服务器要开给web管理机的外网ip：59.56.21.35
+    2、开通这台服务器的23244端口入站权限，开给web管理机ip：10.29.58.219
+       外网服务器要开给web管理机的外网ip：119.23.138.1
     3、把服务器的ip和你的个人电脑ip提交给管理员，让管理员添加个人ip对服务器的管理权限
     4、设置HOST
-       10.79.137.54 <%=m_domain %> 
+       119.23.138.1 <%=m_domain %> 
     5、管理计划任务，进入页面：http://<%=m_domain %>/planadmin.aspx
        在“读取任务”按钮左侧的文本框内输入服务器ip，点击“读取任务”即可
     注意：请参考程序目录下的exe.Config文件里的注释说明，以开通或关闭文件管理等功能
@@ -131,7 +131,8 @@
             “重”，立即重启任务，然后继续按“运行类型”进行工作        
 </pre>
     </div>
-
+    
+    <%if (m_isAdmin){%>
     <!-- 文件管理 -->
     <div class="ui-tabs-panel ui-tabs-hide" id="fragment2">
         <table style="table-layout:fixed;">
@@ -185,11 +186,10 @@
         <div id="divFileRet"></div>
     </div>
 
-    <%if (m_isAdmin){%>
     <!-- 服务器列表管理 -->
     <div class="ui-tabs-panel ui-tabs-hide" id="fragment3">
         说明:<input type="text" id="txtAdminServerDesc" style="width:200px;" value="" size="50"/>　
-        服务器IP:<input type="text" id="txtAdminServer" style="width:300px;" value="10.1.240.1"/><br/>
+        服务器IP:<input type="text" id="txtAdminServer" style="width:300px;" value="10.0.0.1"/><br/>
         <input type="button" value="刷新上面显示的服务器清单" onclick="refreshServerIP();refreshServerList();"/>　
         <input type="button" value="删除上面勾选的服务器" onclick="delAdminServer()"/>　
         <input type="button" value="添加" onclick="addAdminServer()"/>　

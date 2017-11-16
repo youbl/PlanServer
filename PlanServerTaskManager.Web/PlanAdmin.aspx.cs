@@ -78,12 +78,12 @@ namespace PlanServerTaskManager.Web
                     Response.End();
                     return;
                 }
-                if (!ValidServer())
-                {
-                    Response.Write("对指定的IP没有权限" + Request["tip"]);
-                    Response.End();
-                    return;
-                }
+                //if (!ValidServer())
+                //{
+                //    Response.Write("对指定的IP没有权限" + Request["tip"]);
+                //    Response.End();
+                //    return;
+                //}
    
 
                 //string ret = PlanServerService.SocketClient.SendBySocket(ip, int.Parse(port),
@@ -863,7 +863,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
             {
                 if (str.Equals(_pwd, StringComparison.OrdinalIgnoreCase) || str.Equals(_pwdOther, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (isInner)
+                    if (isInner || isCompany)
                     {
                         return true;
                     }
@@ -899,8 +899,8 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
     <form method='post'>
         password:<input type='password' name='txtp'/><input type='submit'/>
         <hr/>
-        请在本地Host设置如下域名后再访问（只允许192.168.*.*网段访问）<br/>
-        <span style='font-weight:bold;color:red;'>10.79.137.54 {5}</span><hr />
+        请在本地Host设置如下域名后再访问（只允许相同内网网段访问）<br/>
+        <span style='font-weight:bold;color:red;'>119.23.138.1 {5}</span><hr />
         QueryString:{0}<br/>
         Form:{1}<br/>
         RemoteIP:{2}

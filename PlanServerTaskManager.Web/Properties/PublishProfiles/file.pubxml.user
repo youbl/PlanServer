@@ -10,37 +10,52 @@
   </PropertyGroup>
   <ItemGroup>
     <File Include="bin/ICSharpCode.SharpZipLib.dll">
-      <publishTime>11/30/2012 10:10:16</publishTime>
+      <publishTime>10/17/2017 13:13:44</publishTime>
+    </File>
+    <File Include="bin/NLog.config">
+      <publishTime>11/16/2017 10:51:10</publishTime>
     </File>
     <File Include="bin/NLog.dll">
-      <publishTime>06/13/2013 10:33:00</publishTime>
+      <publishTime>10/17/2017 13:13:44</publishTime>
     </File>
     <File Include="bin/PlanServerService.dll">
-      <publishTime>09/01/2014 11:30:15</publishTime>
+      <publishTime>11/09/2017 12:49:19</publishTime>
+    </File>
+    <File Include="bin/PlanServerService.pdb">
+      <publishTime>11/09/2017 12:49:19</publishTime>
     </File>
     <File Include="bin/PlanServerTaskManager.Web.dll">
-      <publishTime>09/24/2014 09:23:45</publishTime>
+      <publishTime>11/16/2017 10:53:32</publishTime>
+    </File>
+    <File Include="bin/PlanServerTaskManager.Web.pdb">
+      <publishTime>11/16/2017 10:53:32</publishTime>
     </File>
     <File Include="bin/System.Data.SQLite.DLL">
-      <publishTime>04/18/2014 18:27:25</publishTime>
+      <publishTime>10/17/2017 13:13:44</publishTime>
     </File>
     <File Include="bin/System.Data.SQLite_x64.DLL">
       <publishTime>04/18/2010 13:32:32</publishTime>
     </File>
+    <File Include="Global.asax">
+      <publishTime>10/17/2017 13:13:43</publishTime>
+    </File>
+    <File Include="NLog.config">
+      <publishTime>11/16/2017 10:51:10</publishTime>
+    </File>
     <File Include="PlanAdmin.aspx">
-      <publishTime>09/01/2014 11:46:15</publishTime>
+      <publishTime>11/09/2017 13:03:06</publishTime>
     </File>
     <File Include="PlanAdmin.js">
-      <publishTime>09/13/2014 08:52:38</publishTime>
+      <publishTime>10/17/2017 13:13:43</publishTime>
     </File>
     <File Include="PlanAdminOther.js">
-      <publishTime>03/13/2014 15:28:01</publishTime>
+      <publishTime>10/17/2017 13:13:43</publishTime>
     </File>
     <File Include="PlanFileAdmin.js">
-      <publishTime>06/05/2014 16:41:32</publishTime>
+      <publishTime>10/17/2017 13:13:43</publishTime>
     </File>
     <File Include="Web.config">
-      <publishTime>08/21/2014 09:56:03</publishTime>
+      <publishTime>11/16/2017 10:59:10</publishTime>
     </File>
   </ItemGroup>
 </Project>

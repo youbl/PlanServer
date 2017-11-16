@@ -8,7 +8,7 @@ using PlanServerService.Ext;
 
 namespace PlanServerTaskManager.Web
 {
-    public class Global : System.Web.HttpApplication
+    public class Global : HttpApplication
     {
         void Application_Start(object sender, EventArgs e)
         {
@@ -24,6 +24,7 @@ namespace PlanServerTaskManager.Web
 
         void Application_End(object sender, EventArgs e)
         {
+            // 程序池停止日志，并收集停止原因
             string message = string.Empty;
             HttpRuntime runtime = (HttpRuntime)typeof(HttpRuntime).InvokeMember("_theRuntime", 
                 BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.GetField, null, null, null);
@@ -36,30 +37,19 @@ namespace PlanServerTaskManager.Web
                 message = string.Format("\r\nshutDownMessage:{0}\r\nshutDownStack:\r\n:{1}", shutDownMessage, shutDownStack);
             }
             LogHelper.WriteCustom("Application_End " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + message, "AppStartEnd\\");
-
-            // 站点停止时，写入pv
-            if (pvCount > 0)
-            {
-                LogHelper.WriteCustom(DateTime.Now + " Application_End " + pvCount.ToString(), @"zPV\", false);
-            }
         }
 
         /// <summary>
         /// 服务器ip list，用于日志记录
         /// </summary>
         public static string serverIpList = Common.GetServerIpList();
-        /// <summary>
-        /// 最近一次访问时间，用于服务器是否下线的判断
-        /// </summary>
-        public static DateTime LAST_ACCESS_TIME = DateTime.MinValue;
-
-
+       
         void Application_BeginRequest(object sender, EventArgs e)
         {
             // Global的Application_EndRequest里收集，便于分析超时原因
-            var msg = HttpContext.Current.Timestamp.ToString("HH:mm:ss.fff") + ";" +
-                      DateTime.Now.ToString("HH:mm:ss.fff");
-            HttpContext.Current.Items["caltime"] = msg;
+            //var msg = HttpContext.Current.Timestamp.ToString("HH:mm:ss.fff") + ";" +
+            //          DateTime.Now.ToString("HH:mm:ss.fff");
+            //HttpContext.Current.Items["caltime"] = msg;
         }
 
         void Application_EndRequest(object sender, EventArgs e)
@@ -68,7 +58,6 @@ namespace PlanServerTaskManager.Web
 
             string normalurl = Request.Url.ToString();
             string url = normalurl.ToLower();
-            var accessType = GetUserAccessType(url);
 
             #region 超过2秒时，记录请求结束时间
             double m = (now - HttpContext.Current.Timestamp).TotalMilliseconds;
@@ -94,14 +83,6 @@ namespace PlanServerTaskManager.Web
                 LogHelper.WriteCustom(time2, "CalTime\\");// + GetFilename(Request.Url.ToString())); // + file);
             }
             #endregion
-        
-            PvCount(url);
-
-            // 记录活动时间，用于判断lvs是否活动中
-            if (accessType == AccessTypeOption.User)
-            {
-                LAST_ACCESS_TIME = now;
-            }
         }
 
         void Application_Error(object sender, EventArgs e)
@@ -148,7 +129,7 @@ namespace PlanServerTaskManager.Web
 
 #if !DEBUG
             HttpContext.Current.ClearError();
-            Response.Redirect("http://suggestion.91.com/404.html", false);
+            Response.Redirect("404.html", false);
             HttpContext.Current.ApplicationInstance.CompleteRequest();
 #endif
         }
@@ -194,46 +175,6 @@ namespace PlanServerTaskManager.Web
                 }
             }
             return headers.ToString();
-        }
-
-
-        #region 用于站点pv统计的代码
-        public static int pvCount
-        {
-            get
-            {
-                return AccessTotal.GetNum((int)AccessTypeOption.User);
-            }
-        }
-        static void PvCount(string url)
-        {
-            //if (CustomConfigHelper.GetBooleanWithType("EnableCountPV"))
-            {
-                AccessTypeOption act = GetUserAccessType(url);
-                // 内存中统计，每分钟提交一次
-                AccessTotal.IncGlobal(act);
-            }
-        }
-        #endregion
-
-        // 参数url必须已经ToLower了
-        static AccessTypeOption GetUserAccessType(string url)
-        {
-            AccessTypeOption act;
-            if (url.SundaySearch("iswebmon=") > 0)
-            {
-                act = AccessTypeOption.Monitor; // 站点监控程序访问
-            }
-            else if (url.SundaySearch("service.ashx") >= 0 ||
-                  url.SundaySearch("service.svc") >= 0)
-            {
-                act = AccessTypeOption.User; // 表示正常访问
-            }
-            else
-            {
-                act = AccessTypeOption.Other; //表示测试访问
-            }
-            return act;
         }
     }
 }
