@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using PlanServerService;
 
 namespace PlanServerTaskManager.Web
 {
@@ -11,9 +12,9 @@ namespace PlanServerTaskManager.Web
         // Variable for continual checking in the 
         // While loop in the WaitForFullGCProc method.
         static bool checkForNotify;
-        
+
         // Variable for ending the example.
-        static readonly bool finalExit = false;
+        static bool finalExit = false;
 
         /// <summary>
         /// 注册通知
@@ -47,6 +48,7 @@ namespace PlanServerTaskManager.Web
         /// </summary>
         public static void Cancel()
         {
+            finalExit = true;
             GC.CancelFullGCNotification();
         }
 
@@ -57,51 +59,57 @@ namespace PlanServerTaskManager.Web
         {
             while (true)
             {
-                // CheckForNotify is set to true and false in Main.
-                while (checkForNotify)
+                try
                 {
-                    // Check for a notification of an approaching collection.
-                    GCNotificationStatus s = GC.WaitForFullGCApproach();
-                    if (s == GCNotificationStatus.Succeeded)
+                    // CheckForNotify is set to true and false in Main.
+                    while (checkForNotify)
                     {
-                        WriteLog("GC 即将开始");
-                        OnFullGCApproachNotify();
-                    }
-                    else if (s == GCNotificationStatus.Canceled)
-                    {
-                        WriteLog("GC 即将开始 -> 取消");
-                        break;
-                    }
-                    else
-                    {
-                        // This can occur if a timeout period
-                        // is specified for WaitForFullGCApproach(Timeout) 
-                        // or WaitForFullGCComplete(Timeout)  
-                        // and the time out period has elapsed. 
-                        WriteLog("GC 即将开始 -> 超时");
-                        break;
-                    }
+                        // Check for a notification of an approaching collection.
+                        GCNotificationStatus s = GC.WaitForFullGCApproach();
+                        if (s == GCNotificationStatus.Succeeded)
+                        {
+                            WriteLog("GC 即将开始");
+                            OnFullGCApproachNotify();
+                        }
+                        else if (s == GCNotificationStatus.Canceled)
+                        {
+                            WriteLog("GC 即将开始 -> 取消");
+                            break;
+                        }
+                        else
+                        {
+                            // This can occur if a timeout period
+                            // is specified for WaitForFullGCApproach(Timeout) 
+                            // or WaitForFullGCComplete(Timeout)  
+                            // and the time out period has elapsed. 
+                            WriteLog("GC 即将开始 -> 超时");
+                            break;
+                        }
 
-                    // Check for a notification of a completed collection.
-                    s = GC.WaitForFullGCComplete();
-                    if (s == GCNotificationStatus.Succeeded)
-                    {
-                        WriteLog("GC 完成");
-                        OnFullGCCompleteEndNotify();
-                    }
-                    else if (s == GCNotificationStatus.Canceled)
-                    {
-                        WriteLog("GC 完成 -> 取消");
-                        break;
-                    }
-                    else
-                    {
-                        // Could be a time out.
-                        WriteLog("GC 完成 -> 超时");
-                        break;
+                        // Check for a notification of a completed collection.
+                        s = GC.WaitForFullGCComplete();
+                        if (s == GCNotificationStatus.Succeeded)
+                        {
+                            WriteLog("GC 完成");
+                            OnFullGCCompleteEndNotify();
+                        }
+                        else if (s == GCNotificationStatus.Canceled)
+                        {
+                            WriteLog("GC 完成 -> 取消");
+                            break;
+                        }
+                        else
+                        {
+                            // Could be a time out.
+                            WriteLog("GC 完成 -> 超时");
+                            break;
+                        }
                     }
                 }
-
+                catch (Exception exp)
+                {
+                    WriteLog("GC 检查异常 -> " + exp);
+                }
 
                 Thread.Sleep(500);
                 // FinalExit is set to true right before  
@@ -113,7 +121,7 @@ namespace PlanServerTaskManager.Web
             }
 
         }
-        
+
         /// <summary>
         /// 即将发生GC前的处理
         /// </summary>
@@ -151,7 +159,7 @@ namespace PlanServerTaskManager.Web
 
         private static void WriteLog(string msg)
         {
-            PlanServerService.LogHelper.WriteCustom(msg, "GCNotification\\", false);
+            LogHelper.WriteCustom(msg, "GCNotification\\", false);
         }
     }
 }

@@ -44,7 +44,7 @@
     <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/jq_125bece.js"></script>
     
     <link rel="stylesheet" href="https://ascdn.bdstatic.com/fz_act/js/jquery-ui-min.css">
-       <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/jquery-ui-min.js"></script>
+    <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/jquery-ui-min.js"></script>
 
     <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/ui.tabs_d89ad1a.js"></script>
     <link rel="stylesheet" href="https://ascdn.bdstatic.com/fz_act/css/ui.tabs_2b0cf63.css" type="text/css" />

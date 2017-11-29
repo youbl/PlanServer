@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.Threading;
@@ -12,13 +13,25 @@ namespace PlanServerTaskManager.Web
     {
         void Application_Start(object sender, EventArgs e)
         {
-            // 程序池启动日志
-            LogHelper.WriteCustom(DateTime.Now + " Application_Start", "AppStartEnd\\", false);
+            // 启动时记录日志，避免后面影响
+            var procid = Process.GetCurrentProcess().Id.ToString();
+            var thid = Thread.CurrentThread.ManagedThreadId.ToString();
+            var idmsg = "当前进程/线程ID：" + procid + "/" + thid;
+            LogHelper.WriteCustom("App_Start Begin\r\n  " + idmsg, "AppStartEnd\\", false);
+            
             // 注册完整GC通知，在gc回收时记录日志
             GCNotification.Register();
 
             // 初始化ip纯真库，用于ip地区判断
             // IPLocator.Initialize(Server.MapPath(@"qqwry.dat"));
+
+            int minworkthreads;
+            int miniocpthreads;
+            ThreadPool.GetMinThreads(out minworkthreads, out miniocpthreads);
+
+            // 初始化完成记录日志
+            idmsg += "最小工作线程数/IO线程数:" + minworkthreads.ToString() + "/" + miniocpthreads.ToString();
+            LogHelper.WriteCustom("App_Start End\r\n  " + idmsg, "AppStartEnd\\", false);
         }
 
 
@@ -100,16 +113,10 @@ namespace PlanServerTaskManager.Web
             if (exp404 != null)
             {
                 int erCode = exp404.GetHttpCode();
-                if (erCode == 404)
+                if (erCode == 404 || erCode == 400)
                 {
-                    LogHelper.WriteCustom(ex.Message, "404err\\");
-                    HttpContext.Current.ClearError();
-                    return;
-                }
-                if (erCode == 400)
-                {
-                    LogHelper.WriteCustom(ex.Message, "400err\\");
-                    HttpContext.Current.ClearError();
+                    LogHelper.WriteCustom(ex.Message, erCode.ToString() + "err\\"));
+                    ClearError();
                     return;
                 }
             }
@@ -121,19 +128,22 @@ namespace PlanServerTaskManager.Web
             if (validationExp != null)
             {
                 LogHelper.WriteCustom(msg, "expValidation\\");
-                HttpContext.Current.ClearError();
+                ClearError();
                 return;
             }
 
             LogHelper.WriteException(msg, ex);
+            ClearError();
+        }
 
+        void ClearError()
+        {
 #if !DEBUG
             HttpContext.Current.ClearError();
             Response.Redirect("404.html", false);
             HttpContext.Current.ApplicationInstance.CompleteRequest();
 #endif
         }
-
         //void Session_Start(object sender, EventArgs e)
         //{
         //    // Code that runs when a new session is started

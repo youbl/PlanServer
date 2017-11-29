@@ -80,6 +80,15 @@
     <Folder Include="App_Data\" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="cdnbak\jquery-ui-min.css" />
+    <None Include="cdnbak\jquery-ui-min.js" />
+    <None Include="cdnbak\jq_125bece.js" />
+    <None Include="cdnbak\rowColor_666490a.js" />
+    <None Include="cdnbak\ui.tabs_2b0cf63.css" />
+    <None Include="cdnbak\ui.tabs_d89ad1a.js" />
+    <None Include="cdnbak\md5.min.js" />
+    <Content Include="tools.aspx" />
+    <Content Include="CustomConfig.aspx" />
     <Content Include="Global.asax" />
     <Content Include="PlanAdminOther.js" />
     <Content Include="PlanFileAdmin.js" />
