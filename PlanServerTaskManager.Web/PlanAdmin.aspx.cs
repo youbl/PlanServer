@@ -24,7 +24,7 @@ namespace PlanServerTaskManager.Web
 
         protected const bool _needProxy = false;                            // 是否需要通过代理访问此页面
 
-        private static string _logDir = @"e:\weblogs\planserver\";
+        private static string _logDir;
 
         protected string m_currentUrl;
         protected string m_localIp, m_remoteIp, m_remoteIpLst;
@@ -38,6 +38,15 @@ namespace PlanServerTaskManager.Web
 
         protected void Page_Load(object sender, EventArgs e)
         {
+            if (_logDir == null)
+            {
+                if(labLogDir != null)
+                    _logDir = labLogDir.Text;
+                if (string.IsNullOrEmpty(_logDir))
+                {
+                    _logDir = @"e:\weblogs\planserver\";
+                }
+            }
             // ClearDir(SocketCommon.TmpDir);
 
             _pwd = labCommon.Text;

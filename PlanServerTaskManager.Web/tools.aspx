@@ -293,15 +293,28 @@
         sb.Append("</span>\r\n\r\n");
 
         sb.Append("<a href='javascript:void(0)' onclick='showHide(this);'>=============================运行时相关：========================</a>\r\n<span>");
-        sb.AppendFormat("  当前进程内存占用        :{0} 兆 \r\n", (Process.GetCurrentProcess().WorkingSet64 / 1024.0 / 1024.0).ToString("N2"));
+        Process process = Process.GetCurrentProcess();
+        sb.AppendFormat("  机器名: {2}； 启动时间: {0}；  当前进程占用内存:{1} 兆； {3} \r\n", 
+            process.StartTime.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+            (process.WorkingSet64 / 1024.0 / 1024.0).ToString("N2"),
+            process.MachineName,
+            process.MainModule.FileName);
         sb.AppendFormat("  HttpRuntime.Cache个数   :{0} \r\n", HttpRuntime.Cache.Count.ToString());
         int availableWorkerThreads, availableCompletionPortThreads, maxWorkerThreads, maxPortThreads;
         ThreadPool.GetAvailableThreads(out availableWorkerThreads, out availableCompletionPortThreads);
         ThreadPool.GetMaxThreads(out maxWorkerThreads, out maxPortThreads);
 
-        sb.AppendFormat("  最大线程数:{0}； 最大异步I/O线程数:{1}\r\n", maxWorkerThreads.ToString().PadRight(8), maxPortThreads.ToString());
-        sb.AppendFormat("  已用线程数:{0}； 已用异步I/O线程数:{1}\r\n", (maxWorkerThreads - availableWorkerThreads).ToString().PadRight(8), (maxPortThreads - availableCompletionPortThreads).ToString());
-        sb.AppendFormat("  空闲线程数:{0}； 空闲异步I/O线程数:{1}\r\n", availableWorkerThreads.ToString().PadRight(8), availableCompletionPortThreads.ToString());
+        int runThCnt = 0;
+        foreach (ProcessThread thread in process.Threads)
+        {
+            if (thread.ThreadState == System.Diagnostics.ThreadState.Running)
+                runThCnt++;
+        }
+        sb.AppendFormat("  已用用户线程数:{0}； 活动用户线程数:{1} \r\n", (process.Threads.Count).ToString().PadRight(8), runThCnt.ToString());
+        sb.AppendFormat("  已用异步线程数:{0}； 已用异步I/O线程数:{1}\r\n", (maxWorkerThreads - availableWorkerThreads).ToString().PadRight(8), (maxPortThreads - availableCompletionPortThreads).ToString());
+        sb.AppendFormat("  最大异步线程数:{0}； 最大异步I/O线程数:{1}\r\n", maxWorkerThreads.ToString().PadRight(8), maxPortThreads.ToString());
+        sb.AppendFormat("  空闲异步线程数:{0}； 空闲异步I/O线程数:{1}\r\n", availableWorkerThreads.ToString().PadRight(8), availableCompletionPortThreads.ToString());
+
         sb.Append("</span>\r\n\r\n");
 
         return sb.ToString();

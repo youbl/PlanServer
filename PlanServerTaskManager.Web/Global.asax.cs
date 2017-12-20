@@ -65,6 +65,10 @@ namespace PlanServerTaskManager.Web
             //HttpContext.Current.Items["caltime"] = msg;
         }
 
+        // 最近一次用户访问的时间    
+        public static DateTime LAST_ACCESS_TIME_KEY = DateTime.Now;
+        // 站点启动以来，正常用户访问次数
+        public static int AccessCount = 0;
         void Application_EndRequest(object sender, EventArgs e)
         {
             DateTime now = DateTime.Now;
@@ -96,6 +100,14 @@ namespace PlanServerTaskManager.Web
                 LogHelper.WriteCustom(time2, "CalTime\\");// + GetFilename(Request.Url.ToString())); // + file);
             }
             #endregion
+
+            // 记录活动时间，用于判断站点是否被用户使用中（这些判断代码注意要屏蔽测试页面）
+            if (url.IndexOf("iswebmon=", StringComparison.Ordinal) < 0 &&           // 站点监控程序访问，不作为用户
+                url.IndexOf("/checkipinfo.aspx", StringComparison.Ordinal) < 0)   // 前端轮询时，不作为用户
+            {
+                LAST_ACCESS_TIME_KEY = DateTime.Now;
+                Interlocked.Increment(ref AccessCount);
+            }
         }
 
         void Application_Error(object sender, EventArgs e)
@@ -115,7 +127,7 @@ namespace PlanServerTaskManager.Web
                 int erCode = exp404.GetHttpCode();
                 if (erCode == 404 || erCode == 400)
                 {
-                    LogHelper.WriteCustom(ex.Message, erCode.ToString() + "err\\"));
+                    LogHelper.WriteCustom(ex.Message, erCode.ToString() + "err\\");
                     ClearError();
                     return;
                 }

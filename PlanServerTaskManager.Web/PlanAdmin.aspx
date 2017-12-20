@@ -60,6 +60,7 @@
     <asp:Label runat="server" Visible="False" ID="labCommonOther" Text="4c3e1ec04215f69d6a8e9c023c9e4572"></asp:Label>
     <asp:Label runat="server" Visible="False" ID="labMainInner" Text="1cc94f558046754d7f9b1ae2af8cb78a"></asp:Label>
     <asp:Label runat="server" Visible="False" ID="labMainOuter" Text="xxx"></asp:Label>
+    <asp:Label runat="server" Visible="False" ID="labLogDir" Text="e:\weblogs\planserver"></asp:Label>
 <div>
     <div style="background-color:greenyellow">
         <label><input type="checkbox" onclick="chkAll(this);" />全选服务器</label>
