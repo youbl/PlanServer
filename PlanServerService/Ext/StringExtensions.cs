@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace PlanServerService.Ext
 {
@@ -112,8 +113,7 @@ namespace PlanServerService.Ext
             {
                 return false;
             }
-            int i;
-            return Int32.TryParse(source, out i);
+            return Int32.TryParse(source, out _);
         }
 
         /// <summary>
@@ -1164,6 +1164,35 @@ namespace PlanServerService.Ext
                     return defaultContentType;
             }
         }
-        
+
+
+
+        /// <summary>
+        /// 标准MD5加密
+        /// </summary>
+        /// <param name="source">待加密字符串</param>
+        /// <param name="addKey">附加字符串</param>
+        /// <param name="encoding">编码方式，为空时使用UTF-8</param>
+        /// <returns></returns>
+        public static string MD5(this string source, string addKey = "", Encoding encoding = null)
+        {
+            if (addKey.Length > 0)
+            {
+                source = source + addKey;
+            }
+            if (encoding == null)
+            {
+                encoding = Encoding.UTF8;
+            }
+
+            byte[] datSource = encoding.GetBytes(source);
+            byte[] newSource;
+            using (MD5 md5 = new MD5CryptoServiceProvider())
+            {
+                newSource = md5.ComputeHash(datSource);
+            }
+            string byte2String = BitConverter.ToString(newSource).Replace("-", "").ToLower();
+            return byte2String;
+        }
     }
 }

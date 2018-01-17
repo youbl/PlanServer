@@ -41,15 +41,15 @@
             width: 100px;
         }
     </style>
-    <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/jq_125bece.js"></script>
+    <script type="text/javascript" src="cdnbak/jq_125bece.js"></script>
     
-    <link rel="stylesheet" href="https://ascdn.bdstatic.com/fz_act/js/jquery-ui-min.css">
-    <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/jquery-ui-min.js"></script>
+    <link rel="stylesheet" href="cdnbak/jquery-ui-min.css">
+    <script type="text/javascript" src="cdnbak/jquery-ui-min.js"></script>
 
-    <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/ui.tabs_d89ad1a.js"></script>
-    <link rel="stylesheet" href="https://ascdn.bdstatic.com/fz_act/css/ui.tabs_2b0cf63.css" type="text/css" />
+    <script type="text/javascript" src="cdnbak/ui.tabs_d89ad1a.js"></script>
+    <link rel="stylesheet" href="cdnbak/ui.tabs_2b0cf63.css" type="text/css" />
 
-    <script type="text/javascript" src="https://ascdn.bdstatic.com/fz_act/js/rowColor_666490a.js"></script>
+    <script type="text/javascript" src="cdnbak/rowColor_666490a.js"></script>
 
     <script type="text/javascript" src="PlanAdmin.js"></script>
     <script type="text/javascript" src="PlanFileAdmin.js"></script>
@@ -162,7 +162,7 @@
             <tr>
                 <td>显示的目录</td>
                 <td>
-                    <input type="text" id="fileDir" style="width:600px" value="E:\WebLogs"/>
+                    <input type="text" id="fileDir" style="width:600px" value="E:"/>
                 </td>
             </tr>
             <tr>
@@ -223,7 +223,7 @@
     <%if (m_enableSql){%>
     <!-- Sqlite维护 -->
     <div class="ui-tabs-panel ui-tabs-hide" id="fragment6">
-        db路径:<input type="text" id="txtDBP" value="e:\upload\planserver\planserver.db" style="width:900px"/>
+        db路径:<input type="text" id="txtDBP" value="d:\planserver\planserver.db" style="width:900px"/>
         <textarea id="txtSql" style="width:1000px; height: 200px;"></textarea><br/>
         <input type="button" value="执行SQL" onclick="doSql()"/>
         <hr/>

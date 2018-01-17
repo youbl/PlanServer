@@ -145,7 +145,7 @@ namespace PlanServerRestart
 
         static void WriteLog(string msg)
         {
-            string dir = @"E:\weblogs\PlanServerMain\StopStartService";
+            string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"StopStartService");
             if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
             using (var sw = new StreamWriter(dir + @"\log.txt", true, Encoding.UTF8))

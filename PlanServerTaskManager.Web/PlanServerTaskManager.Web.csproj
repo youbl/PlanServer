@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -13,7 +13,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>PlanServerTaskManager.Web</RootNamespace>
     <AssemblyName>PlanServerTaskManager.Web</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <UseIISExpress>false</UseIISExpress>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -36,6 +36,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -44,6 +45,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -52,9 +54,9 @@
     <Reference Include="System.Web.ApplicationServices" />
     <Reference Include="System.Web.DynamicData" />
     <Reference Include="System.Web.Entity" />
-    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Web" />
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Web.Services" />
@@ -80,15 +82,22 @@
     <Folder Include="App_Data\" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="cdnbak\jquery-ui-min.css" />
-    <None Include="cdnbak\jquery-ui-min.js" />
-    <None Include="cdnbak\jq_125bece.js" />
-    <None Include="cdnbak\rowColor_666490a.js" />
-    <None Include="cdnbak\ui.tabs_2b0cf63.css" />
-    <None Include="cdnbak\ui.tabs_d89ad1a.js" />
-    <None Include="cdnbak\md5.min.js" />
-    <Content Include="tools.aspx" />
-    <Content Include="CustomConfig.aspx" />
+    <Content Include="cdnbak\images\ui-icons_444444_256x240.png" />
+    <Content Include="cdnbak\images\ui-icons_555555_256x240.png" />
+    <Content Include="cdnbak\images\ui-icons_777620_256x240.png" />
+    <Content Include="cdnbak\images\ui-icons_777777_256x240.png" />
+    <Content Include="cdnbak\images\ui-icons_cc0000_256x240.png" />
+    <Content Include="cdnbak\images\ui-icons_ffffff_256x240.png" />
+    <Content Include="cdnbak\jquery-ui-min.css" />
+    <Content Include="cdnbak\jquery-ui-min.js" />
+    <Content Include="cdnbak\jq_125bece.js" />
+    <Content Include="cdnbak\rowColor_666490a.js" />
+    <Content Include="cdnbak\ui.tabs.png" />
+    <Content Include="cdnbak\ui.tabs_2b0cf63.css" />
+    <Content Include="cdnbak\ui.tabs_d89ad1a.js" />
+    <Content Include="cdnbak\md5.min.js" />
+    <Content Include="tools\tools.aspx" />
+    <Content Include="tools\CustomConfig.aspx" />
     <Content Include="Global.asax" />
     <Content Include="PlanAdminOther.js" />
     <Content Include="PlanFileAdmin.js" />
@@ -121,6 +130,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <OutputPath>bin\</OutputPath>
@@ -130,6 +140,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />

@@ -26,7 +26,11 @@ namespace PlanServerService
             if (!string.IsNullOrEmpty(tmp))
                 TmpDir = tmp;
             else
-                TmpDir = @"E:\upload\planserver\downtmp";
+                TmpDir = @"logs\downtmp";
+            if (TmpDir.IndexOf(':') < 0)
+            {
+                TmpDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, TmpDir);
+            }
             if (!Directory.Exists(TmpDir))
                 Directory.CreateDirectory(TmpDir);
         }

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Web;
 using System.Web.Security;
 using PlanServerService;
+using PlanServerService.Ext;
 using PlanServerService.FileAdmin;
 
 namespace PlanServerTaskManager.Web
@@ -849,13 +850,13 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
             if (!string.IsNullOrEmpty(str))
             {
                 // 获取输入的密码验证
-                str = FormsAuthentication.HashPasswordForStoringInConfigFile(str, "MD5");
+                str = str.MD5();
                 SetSession("p", str);
             }
             else
             {
-// ReSharper disable once ConditionIsAlwaysTrueOrFalse
-// ReSharper disable once CSharpWarnings::CS0162
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                // ReSharper disable once CSharpWarnings::CS0162
                 if (_needProxy && isInner)  // 内网通过其它代理服务器传递的请求
                 {
                     str = Request.Form["p"];
@@ -939,7 +940,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
             }
             return sb.ToString();
         }
-                /// <summary>
+        /// <summary>
         /// 根据登录IP，判断是否对指定的服务器有权限
         /// </summary>
         /// <returns></returns>
@@ -1081,8 +1082,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
             string ip2 = request.ServerVariables["REMOTE_ADDR"];
             string realip = request.ServerVariables["HTTP_X_REAL_IP"];
             string forwardip = request.ServerVariables["HTTP_X_FORWARDED_FOR"];
-            string proxy = request.Headers.Get("HTTP_NDUSER_FORWARDED_FOR_HAPROXY");
-            return ip1 + ";" + ip2 + ";" + realip + ";" + forwardip + ";" + proxy;
+            return ip1 + ";" + ip2 + ";" + realip + ";" + forwardip;
         }
         public static string GetServerIpList()
         {
@@ -1176,6 +1176,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
         /// <summary>
         /// 定时清除临时目录旧文件的线程
         /// </summary>
+        // ReSharper disable once UnusedMember.Local
         private static void ClearDir(string dir)
         {
             if (_clearing)

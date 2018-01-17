@@ -209,11 +209,18 @@ namespace PlanServerService
 
                         // 杀死并重启进程
                         ret = KillProcessByPath(task.exepath);
-                        StartProcess(task, dbaccess);
-
                         if (ret > 0)
                         {
-                            msg.Append("\r\n\t重启完成");
+                            msg.Append("\r\n\t已停止,");
+                        }
+                        else
+                        {
+                            msg.Append("\r\n\t进程不存在，");
+                        }
+                        ret = StartProcess(task, dbaccess);
+                        if (ret > 0)
+                        {
+                            msg.Append("重启完成,pid:" + ret.ToString());
                             if (processes != null)
                             {
                                 foreach (ProcessItem item in processes)
@@ -224,7 +231,7 @@ namespace PlanServerService
                         }
                         else
                         {
-                            msg.Append("\r\n\t重启完成(直接启动)");
+                            msg.Append("进程存在，未启动");
                         }
 
                         status = ExeStatus.Running;
@@ -254,21 +261,22 @@ namespace PlanServerService
                                     msg.AppendFormat("\r\n\t\t{0}", item);
                                 }
                             }
+                            msg.Append("\r\n\t已停止，等1分钟，");
                         }
                         else
                         {
                             Output(task.desc + " " + task.exepath + "未启动，等1分钟后启动...");
+                            msg.Append("\r\n\t进程不存在，等1分钟，");
                         }
                         Thread.Sleep(TimeSpan.FromMinutes(1));
-                        StartProcess(task, dbaccess);
-
+                        ret = StartProcess(task, dbaccess);
                         if (ret > 0)
                         {
-                            msg.Append("\r\n\t等1分钟重启完成");
+                            msg.Append("\r\n\t重启完成,pid:" + ret.ToString());
                         }
                         else
                         {
-                            msg.Append("\r\n\t等1分钟直接启动完成");
+                            msg.Append("\r\n\t进程存在，未启动");
                         }
                         status = ExeStatus.Running;
                         Output(msg);
@@ -322,8 +330,15 @@ namespace PlanServerService
                             if (task.runtype == RunType.OneTime || lastRunMin > 1)
                             {
                                 // 启动进程
-                                StartProcess(task, dbaccess);
-                                msg.Append("任务成功启动");
+                                var pid = StartProcess(task, dbaccess);
+                                if (pid > 0)
+                                {
+                                    msg.Append("任务成功启动,pid:" + ret.ToString());
+                                }
+                                else
+                                {
+                                    msg.Append("任务存在，启动失败");
+                                }
                             }
                             else
                             {
@@ -467,8 +482,15 @@ namespace PlanServerService
                                     if (lastRunMin > 1)
                                     {
                                         // 启动进程
-                                        StartProcess(task, dbaccess);
-                                        msg.Append("\r\n\t任务成功启动");
+                                        var pid = StartProcess(task, dbaccess);
+                                        if (pid > 0)
+                                        {
+                                            msg.Append("任务成功启动,pid:" + ret.ToString());
+                                        }
+                                        else
+                                        {
+                                            msg.Append("任务存在，启动失败");
+                                        }
                                     }
                                     else
                                     {
@@ -749,10 +771,31 @@ namespace PlanServerService
         }
 
         // 启动指定的任务
-        static void StartProcess(TaskItem task, Dal dbaccess)
+        static int StartProcess(TaskItem task, Dal dbaccess)
         {
-            int pid = StartProcess(task.exepath, task.exepara);
-            dbaccess.UpdateTaskProcessId(task.id, pid);
+            int pid = CheckAndStartProcess(task.exepath, task.exepara);
+            if (pid > 0)
+            {
+                dbaccess.UpdateTaskProcessId(task.id, pid);
+            }
+            return pid;
+        }
+
+        /// <summary>
+        /// 启动进程的锁，避免同时启动多个进程
+        /// </summary>
+        private static object _objStartLock = new object();
+
+        static int CheckAndStartProcess(string exepath, string exepara)
+        {
+            lock (_objStartLock)
+            {
+                if (ProcessItem.Exists(exepath))
+                {
+                    return 0;
+                }
+                return StartProcess(exepath, exepara);
+            }
         }
 
         // 启动指定的任务
@@ -790,11 +833,12 @@ namespace PlanServerService
         /// <returns></returns>
         public static string ServerOperation(string msg, ref string sendOrRecievedFilePath)
         {
-            string strType;     // 数字字符串形式的操作类型
-            int type;           // 操作类型
-            string strArgs;     // 操作用到的参数
-  
+            string strType; // 数字字符串形式的操作类型
+            int type; // 操作类型
+            string strArgs; // 操作用到的参数
+
             #region 参数验证
+
             if (msg == null)
                 return "err未传递参数";
 
@@ -819,18 +863,20 @@ namespace PlanServerService
 
             //验证CheckCode
             string checkCount = Common.GetCheckCode(strType, strArgs);
-            if(checkcode != checkCount)
+            if (checkcode != checkCount)
             {
                 return "err验证失败";
             }
 
             if (!int.TryParse(strType, out type))
                 return "err无效的操作类型" + strType;
+
             #endregion
 
             if (Common.EnableFileAdmin)
             {
                 #region 所有文件管理分支逻辑
+
                 switch ((OperationType) type)
                 {
                     case OperationType.DirShow:
@@ -857,29 +903,37 @@ namespace PlanServerService
                     case OperationType.FileUpload:
                         return FileUpload(strArgs, sendOrRecievedFilePath);
                 }
+
                 #endregion
             }
 
-            // 计划管理分支逻辑
-            switch ((OperationType)type)
+            try
             {
-                default:
-                    return "err不存在的操作类型:" + type.ToString();
+                // 计划管理分支逻辑
+                switch ((OperationType) type)
+                {
+                    default:
+                        return "err不存在的操作类型:" + type.ToString();
 
-                case OperationType.GetAllTasks:
-                    return GetAllTask();
-                case OperationType.DelTasks:
-                    return DelTasks(strArgs);
-                case OperationType.SaveTasks:
-                    return SaveTasks(strArgs);
-                case OperationType.Immediate:
-                    return ImmediateProcess(strArgs);
+                    case OperationType.GetAllTasks:
+                        return GetAllTask();
+                    case OperationType.DelTasks:
+                        return DelTasks(strArgs);
+                    case OperationType.SaveTasks:
+                        return SaveTasks(strArgs);
+                    case OperationType.Immediate:
+                        return ImmediateProcess(strArgs);
 
-                case OperationType.RunMethod:
-                    return LoadAndRunMethod(strArgs);
+                    case OperationType.RunMethod:
+                        return LoadAndRunMethod(strArgs);
 
-                case OperationType.GetProcesses:
-                    return GetProcesses();
+                    case OperationType.GetProcesses:
+                        return GetProcesses();
+                }
+            }
+            catch (Exception exp)
+            {
+                return strArgs + "\r\nErr:" + exp;
             }
         }
 
@@ -961,13 +1015,11 @@ namespace PlanServerService
                 default:
                     return "不存在的临时类型";
                 case ImmediateType.Start:
-                    // 查找进程是否运行中
-                    ret = FindProcessNumByPath(exepath);
-                    if (ret <= 0)
+                    // 查找进程是否运行中，不在则启动
+                    ret = CheckAndStartProcess(exepath, exepara);
+                    if (ret > 0)
                     {
-                        // 启动进程
-                        StartProcess(exepath, exepara);
-                        return exepath + " 成功启动";
+                        return exepath + " 成功启动, pid:" + ret.ToString();
                     }
                     else
                     {
@@ -984,17 +1036,26 @@ namespace PlanServerService
                         return exepath + " 未运行，无需停止";
                     }
                 case ImmediateType.ReStart:
-                    // 杀死并重启进程
+                    string restartMsg;
+                    // 杀死进程
                     ret = KillProcessByPath(exepath);
-                    StartProcess(exepath, exepara);
-
                     if (ret > 0)
                     {
-                        return exepath + " 重启完成";
+                        restartMsg = exepath + " 成功关闭";
                     }
                     else
                     {
-                        return exepath + " 重启完成(直接启动)";
+                        restartMsg = exepath + " 未启动";
+                    }
+                    // 查找进程是否运行中，不在则启动
+                    ret = CheckAndStartProcess(exepath, exepara);
+                    if (ret > 0)
+                    {
+                        return restartMsg + " 重启完成";
+                    }
+                    else
+                    {
+                        return restartMsg + " 进程已存在";
                     }
             }
         }
@@ -1745,6 +1806,18 @@ namespace PlanServerService
                 }
             }
             return ret;
+        }
+
+        public static bool Exists(string name)
+        {
+            name = name.Replace("'", "").Replace(@"\", @"\\");
+            //http://msdn.microsoft.com/en-us/library/windows/desktop/aa394372(v=vs.85).aspx
+            var scope = new ManagementScope(@"\\.\root\cimv2");
+            var query = new SelectQuery("SELECT * FROM Win32_Process where ExecutablePath = '" + name + "'");
+            using (var searcher = new ManagementObjectSearcher(scope, query))
+            {
+                return searcher.Get().Count > 0;
+            }
         }
 
         public int pid;

@@ -6,9 +6,9 @@ using System.Web;
 
 namespace PlanServerService
 {
-	/// <summary>
-	/// 日志记录类
-	/// </summary>
+    /// <summary>
+    /// 日志记录类
+    /// </summary>
     public class LogHelper
     {
         private static readonly bool isinit = false;
@@ -22,26 +22,14 @@ namespace PlanServerService
             }
         }
 
-        //private static readonly log4net.ILog LogInfo = log4net.LogManager.GetLogger("LogInfo");
-
-        //private static readonly log4net.ILog LogError = log4net.LogManager.GetLogger("LogError");
-
-        //private static readonly log4net.ILog LogException = log4net.LogManager.GetLogger("LogException");
-
-        //private static readonly log4net.ILog LogComplement = log4net.LogManager.GetLogger("LogComplement");
-
-        //private static readonly log4net.ILog LogDubug = log4net.LogManager.GetLogger("LogDubug");
-
-
         private static bool LogInfoEnable = false;
         private static bool LogErrorEnable = false;
         private static bool LogExceptionEnable = false;
         private static bool LogComplementEnable = false;
         private static bool LogDubugEnable = false;
-        //private static bool LogFatalEnabled = false;
 
         private static readonly Logger logger = LogManager.GetCurrentClassLogger();
-
+        private static readonly Logger loggerCustom = LogManager.GetLogger("LogCustom");
 
 
         /// <summary>
@@ -49,18 +37,10 @@ namespace PlanServerService
         /// </summary>
         public static void SetConfig()
         {
-            //log4net.Config.DOMConfigurator.Configure();
-            //LogInfoEnable=LogInfo.IsInfoEnabled;
-            //LogErrorEnable=LogError.IsErrorEnabled;
-            //LogExceptionEnable=LogException.IsErrorEnabled;
-            //LogComplementEnable=LogComplement.IsErrorEnabled;
-            //LogDubugEnable = LogDubug.IsDebugEnabled;
-
             LogInfoEnable = logger.IsInfoEnabled;
             LogErrorEnable = logger.IsErrorEnabled;
             LogExceptionEnable = logger.IsErrorEnabled;
             LogComplementEnable = logger.IsTraceEnabled;
-            //LogFatalEnabled = logger.IsFatalEnabled;
             LogDubugEnable = logger.IsDebugEnabled;
 
         }
@@ -73,7 +53,6 @@ namespace PlanServerService
             if (LogInfoEnable)
             {
                 logger.Info(BuildMessage(info));
-                //LogInfo.Info(info);
             }
         }
         /// <summary>
@@ -85,7 +64,6 @@ namespace PlanServerService
             if (LogDubugEnable)
             {
                 logger.Debug(BuildMessage(info));
-                //LogDubug.Debug(info);
             }
         }
         /// <summary>
@@ -97,7 +75,6 @@ namespace PlanServerService
             if (LogErrorEnable)
             {
                 logger.Error(BuildMessage(info));
-                //LogError.Error(info);
             }
         }
 
@@ -111,7 +88,6 @@ namespace PlanServerService
             if (LogExceptionEnable)
             {
                 logger.Error(BuildMessage(info, ex));
-                //LogException.Error(info,ex);
             }
         }
 
@@ -135,7 +111,6 @@ namespace PlanServerService
             if (LogComplementEnable)
             {
                 logger.Trace(BuildMessage(info));
-                //LogComplement.Error(info);
             }
         }
         /// <summary>
@@ -152,29 +127,52 @@ namespace PlanServerService
         }
 
 
-	    static string BuildMessage(string info, Exception ex = null)
+        /// <summary>
+        /// 补充一些常见的上下文日志，方便问题排查
+        /// </summary>
+        /// <param name="info"></param>
+        /// <param name="ex"></param>
+        /// <returns></returns>
+        static string BuildMessage(string info, Exception ex = null)
         {
             StringBuilder sb = new StringBuilder();
             HttpRequest request = null;
-            if (HttpContext.Current != null && HttpContext.Current.Request != null)
-                request = HttpContext.Current.Request;
-
+            try
+            {
+                if (HttpContext.Current != null)
+                    request = HttpContext.Current.Request;
+            }
+            // ReSharper disable once EmptyGeneralCatchClause
+            catch
+            {
+                // 在Web站点的Application_Start里，不允许访问 HttpContext.Current 上下文
+            }
             sb.AppendFormat("Time:{0}-{1}\r\n", DateTime.Now, info);
 
             if (request != null)
             {
+                // 存在http上下文时，把请求的url和ip等信息带上
                 sb.AppendFormat("Url:{0}\r\n", request.Url);
-                if (null != request.UrlReferrer)
+
+                var post = Convert.ToString(request.Form);
+                if (post.Length > 0)
                 {
-                    sb.AppendFormat("UrlReferrer:{0}\r\n", request.UrlReferrer);
+                    sb.AppendFormat("Post: {0}\r\n", post);
                 }
-                string realip = request.ServerVariables == null
-                                    ? string.Empty
-                                    : request.ServerVariables["HTTP_X_REAL_IP"];
-                string proxy = request.Headers == null
-                                    ? string.Empty
-                                    : request.Headers.Get("HTTP_NDUSER_FORWARDED_FOR_HAPROXY");
-                sb.AppendFormat("UserHostAddress:{0};{1};{2}\r\n", request.UserHostAddress, realip,proxy);
+
+                var header = Convert.ToString(request.Headers);
+                if (header.Length > 0)
+                {
+                    sb.AppendFormat("Header: {0}\r\n", header);
+                }
+
+                var referer = Convert.ToString(request.UrlReferrer);
+                if (referer.Length > 0)
+                {
+                    sb.AppendFormat("UrlReferrer:{0}\r\n", referer);
+                }
+                string realip = request.ServerVariables["HTTP_X_REAL_IP"];
+                sb.AppendFormat("UserHostAddress:{0};{1}\r\n", request.UserHostAddress, realip);
                 sb.AppendFormat("WebServer:{0}\r\n", request.ServerVariables["LOCAL_ADDR"]);
             }
 
@@ -189,24 +187,6 @@ namespace PlanServerService
             return sb.ToString();
         }
 
-        /// <summary>
-        /// 写入自定义日志到自定义目录,本方法对应的Nlog.config配置示例：
-        ///  &lt;targets>
-        ///    &lt;target name="LogCustom" xsi:type="File" layout="${message}"
-        ///          fileName="${logDirectory}\${event-context:DirOrPrefix}${date:format=yyyyMMddHH}.txt">&lt;/target>
-        ///  &lt;/targets>
-        ///  &lt;rules>
-        ///    &lt;logger name="LogCustom" level="Warn" writeTo="LogCustom" />
-        /// </summary>
-        /// <param name="message">要写入的消息</param>
-        /// <param name="dirOrPrefix">
-        /// 写入到的子目录或文件前缀，如果字符串包含\，则是子目录
-        /// 比如 aa\bb 则写入的文件名为aa目录下的bb开头加日期
-        /// </param>
-        public static void WriteCustom(string message, string dirOrPrefix)
-        {
-            WriteCustom(message, dirOrPrefix, null, true);
-        }
 
         /// <summary>
         /// 写入自定义日志到自定义目录,本方法对应的Nlog.config配置示例：
@@ -223,32 +203,11 @@ namespace PlanServerService
         /// 比如 aa\bb 则写入的文件名为aa目录下的bb开头加日期
         /// </param>
         /// <param name="addIpUrl">是否要附加ip和url等信息</param>
-        public static void WriteCustom(string message, string dirOrPrefix, bool addIpUrl)
+        public static void WriteCustom(string message, string dirOrPrefix, bool addIpUrl = true)
         {
             WriteCustom(message, dirOrPrefix, null, addIpUrl);
         }
 
-
-        /// <summary>
-        /// 写入自定义日志到自定义目录,本方法对应的Nlog.config配置示例：
-        ///  &lt;targets>
-        ///    &lt;target name="LogCustom" xsi:type="File" layout="${message}"
-        ///          fileName="${logDirectory}\${event-context:DirOrPrefix}${date:format=yyyyMMddHH}${event-context:Suffix}.txt">&lt;/target>
-        ///  &lt;/targets>
-        ///  &lt;rules>
-        ///    &lt;logger name="LogCustom" level="Warn" writeTo="LogCustom" />
-        /// </summary>
-        /// <param name="message">要写入的消息</param>
-        /// <param name="dirOrPrefix">
-        /// 写入到的子目录或文件前缀，如果字符串包含\，则是子目录
-        /// 比如 aa\bb 则写入的文件名为aa目录下的bb开头加日期
-        /// </param>
-        /// <param name="suffix">写入到的文件后缀</param>
-        public static void WriteCustom(string message, string dirOrPrefix, string suffix)
-        {
-            WriteCustom(message, dirOrPrefix, suffix, true);
-        }
-
         /// <summary>
         /// 写入自定义日志到自定义目录,本方法对应的Nlog.config配置示例：
         ///  &lt;targets>
@@ -265,19 +224,18 @@ namespace PlanServerService
         /// </param>
         /// <param name="suffix">写入到的文件后缀</param>
         /// <param name="addIpUrl">是否要附加ip和url等信息</param>
-        public static void WriteCustom(string message, string dirOrPrefix, string suffix, bool addIpUrl)
+        public static void WriteCustom(string message, string dirOrPrefix, string suffix, bool addIpUrl = true)
         {
             if (addIpUrl)
                 message = BuildMessage(message);
             else
                 message = "\r\n" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + "-" + message;
 
-            Logger logger1 = LogManager.GetLogger("LogCustom");
-            LogEventInfo logEvent = new LogEventInfo(LogLevel.Warn, logger1.Name, message);
+            LogEventInfo logEvent = new LogEventInfo(LogLevel.Trace, loggerCustom.Name, message);
             logEvent.Context["DirOrPrefix"] = dirOrPrefix;
             if (suffix != null)
                 logEvent.Context["Suffix"] = suffix;
-            logger1.Log(logEvent);
+            loggerCustom.Log(logEvent);
         }
     }
 }
