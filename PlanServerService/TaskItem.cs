@@ -152,6 +152,34 @@ namespace PlanServerService
         }
     }
 
+    [DataContract]
+    public class TaskLog
+    {
+        /// <summary>
+        /// 任务自增id
+        /// </summary>
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public int id { get; set; }
+
+        /// <summary>
+        /// 任务的程序文件所在路径
+        /// </summary>
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public string exepath { get; set; }
+
+        /// <summary>
+        /// 日志详情
+        /// </summary>
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public string log { get; set; }
+
+        /// <summary>
+        /// 日志插入时间
+        /// </summary>
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public DateTime instime { get; set; }
+    }
+
     // 只允许2种配置：只配置开始时间 或 开始结束时间都配置
     public class TimePara
     {

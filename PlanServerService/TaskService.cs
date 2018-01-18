@@ -27,7 +27,7 @@ namespace PlanServerService
         {
             get
             {
-                if(_listenPort <= 0)
+                if (_listenPort <= 0)
                 {
                     _listenPort = Common.GetInt32("listenPort", 23244);
                 }
@@ -74,6 +74,8 @@ namespace PlanServerService
         {
             Output("计划任务服务端启动", "start");
             Dal dbaccess = Dal.Default;
+            UpdateDB(dbaccess);
+
             // 第一次运行，必须清空任务参数表（该表用于判断定时运行的任务结束时间）
             dbaccess.ClearTimePara();
             int second = RefreshDbSecond;
@@ -101,20 +103,6 @@ namespace PlanServerService
                     {
                         thread.Join();
                     }
-                    //while (true)
-                    //{
-                    //    int thCount = threads.Count;
-                    //    if (thCount <= 0)
-                    //        break;
-
-                    //    for (int i = thCount - 1; i >= 0; i--)
-                    //    {
-                    //        if (!threads[i].IsAlive)
-                    //            threads.RemoveAt(i);
-                    //    }
-
-                    //    Thread.Sleep(TimeSpan.FromSeconds(1));
-                    //}
                     // 一轮完成，更新进程最后检查时间
                     dbaccess.UpdateLastRuntime();
                 }
@@ -126,7 +114,7 @@ namespace PlanServerService
                 Output("休眠" + second.ToString() + "秒");
                 Thread.Sleep(second * 1000);
             }
-// ReSharper disable once FunctionNeverReturns
+            // ReSharper disable once FunctionNeverReturns
         }
 
         // 运行单个任务的主调方法
@@ -135,16 +123,17 @@ namespace PlanServerService
             try
             {
                 ExeStatus status = ExeStatus.Unknown; // 判断进程状态，以更新表
-                var argstmp = (object[]) args;
-                TaskItem task = (TaskItem) argstmp[0];
-                Dal dbaccess = (Dal) argstmp[1];
+                string runpid = "";
+                var argstmp = (object[])args;
+                TaskItem task = (TaskItem)argstmp[0];
+                Dal dbaccess = (Dal)argstmp[1];
 
                 // 可执行文件不存在
                 if (!File.Exists(task.exepath))
                 {
                     status = ExeStatus.NoFile;
                     // 更新任务运行状态
-                    dbaccess.UpdateTaskExeStatus(task.id, status);
+                    dbaccess.UpdateTaskExeStatus(task, status, runpid);
 
                     var tmpmsg = task.desc + " " + task.exepath + " 文件不存在";
                     Output(tmpmsg);
@@ -177,12 +166,14 @@ namespace PlanServerService
                         ret = FindProcessNumByPath(task.exepath);
                         if (ret > 0)
                         {
-                            msg.Append("\r\n\t任务运行中，前次任务尚未完成");
+                            msg.Append("\r\n\t" + ret.ToString() + "个任务运行中，前次任务尚未完成");
                             processes = FindProcessByPath(task.exepath);
-                            if (processes != null)
+                            if (processes != null && processes.Count > 0)
                             {
+                                runpid += " run pid: ";
                                 foreach (ProcessItem item in processes)
                                 {
+                                    runpid += item.pid.ToString() + ", ";
                                     msg.AppendFormat("\r\n\t\t{0}", item);
                                 }
                             }
@@ -211,7 +202,7 @@ namespace PlanServerService
                         ret = KillProcessByPath(task.exepath);
                         if (ret > 0)
                         {
-                            msg.Append("\r\n\t已停止,");
+                            msg.Append("\r\n\t已停止" + ret.ToString() + "个,");
                         }
                         else
                         {
@@ -221,10 +212,13 @@ namespace PlanServerService
                         if (ret > 0)
                         {
                             msg.Append("重启完成,pid:" + ret.ToString());
-                            if (processes != null)
+                            runpid += "run pid:" + ret.ToString();
+                            if (processes != null && processes.Count > 0)
                             {
+                                runpid += ", killed: ";
                                 foreach (ProcessItem item in processes)
                                 {
+                                    runpid += item.pid.ToString() + ",";
                                     msg.AppendFormat("\r\n\t\t{0}", item);
                                 }
                             }
@@ -253,11 +247,13 @@ namespace PlanServerService
                         ret = KillProcessByPath(task.exepath);
                         if (ret > 0)
                         {
-                            Output(task.desc + " " + task.exepath + "已停止，等1分钟后重启...");
-                            if (processes != null)
+                            Output(task.desc + " " + task.exepath + "已停止" + ret.ToString() + "个，等1分钟后重启...");
+                            if (processes != null && processes.Count > 0)
                             {
+                                runpid += ", killed: ";
                                 foreach (ProcessItem item in processes)
                                 {
+                                    runpid += item.pid.ToString() + ", ";
                                     msg.AppendFormat("\r\n\t\t{0}", item);
                                 }
                             }
@@ -272,6 +268,7 @@ namespace PlanServerService
                         ret = StartProcess(task, dbaccess);
                         if (ret > 0)
                         {
+                            runpid += " run pid: " + ret.ToString();
                             msg.Append("\r\n\t重启完成,pid:" + ret.ToString());
                         }
                         else
@@ -296,11 +293,13 @@ namespace PlanServerService
 
                         if (ret > 0)
                         {
-                            msg.Append("\r\n\t停止完成");
-                            if (processes != null)
+                            msg.Append("\r\n\t停止完成" + ret.ToString() + "个");
+                            if (processes != null && processes.Count > 0)
                             {
+                                runpid += " killed: ";
                                 foreach (ProcessItem item in processes)
                                 {
+                                    runpid += item.pid.ToString() + ",";
                                     msg.AppendFormat("\r\n\t\t{0}", item);
                                 }
                             }
@@ -333,7 +332,8 @@ namespace PlanServerService
                                 var pid = StartProcess(task, dbaccess);
                                 if (pid > 0)
                                 {
-                                    msg.Append("任务成功启动,pid:" + ret.ToString());
+                                    runpid += " run pid:" + pid.ToString();
+                                    msg.Append("任务成功启动,pid:" + pid.ToString());
                                 }
                                 else
                                 {
@@ -354,12 +354,14 @@ namespace PlanServerService
                         }
                         else
                         {
-                            msg.Append("任务正运行中");
+                            msg.Append(ret.ToString() + "个任务正运行中");
                             processes = FindProcessByPath(task.exepath);
-                            if (processes != null)
+                            if (processes != null && processes.Count > 0)
                             {
+                                runpid += " running:";
                                 foreach (ProcessItem item in processes)
                                 {
+                                    runpid += item.pid.ToString() + ",";
                                     msg.AppendFormat("\r\n\t\t{0}", item);
                                 }
                             }
@@ -381,7 +383,7 @@ namespace PlanServerService
                         {
                             status = ExeStatus.NoPara;
                             // 更新任务运行状态
-                            dbaccess.UpdateTaskExeStatus(task.id, status);
+                            dbaccess.UpdateTaskExeStatus(task, status, runpid);
 
                             msg.Append("\r\n\t任务参数未配置，运行失败");
                             Output(msg.ToString());
@@ -397,10 +399,12 @@ namespace PlanServerService
                         }
                         else
                         {
-                            if (processes != null)
+                            if (processes != null && processes.Count > 0)
                             {
+                                runpid += " run pid:";
                                 foreach (ProcessItem item in processes)
                                 {
+                                    runpid += item.pid.ToString() + ",";
                                     msg.AppendFormat("\r\n\t\t{0}", item);
                                 }
                             }
@@ -410,7 +414,7 @@ namespace PlanServerService
                         StringBuilder sbEndTime = new StringBuilder();
                         foreach (TimePara timepara in task.TaskPara)
                         {
-                            if (task.runtype == RunType.PerWeek && timepara.WeekOrDay != (int) now.DayOfWeek)
+                            if (task.runtype == RunType.PerWeek && timepara.WeekOrDay != (int)now.DayOfWeek)
                                 continue;
                             if (task.runtype == RunType.PerMonth && timepara.WeekOrDay != now.Day)
                                 continue;
@@ -485,7 +489,8 @@ namespace PlanServerService
                                         var pid = StartProcess(task, dbaccess);
                                         if (pid > 0)
                                         {
-                                            msg.Append("任务成功启动,pid:" + ret.ToString());
+                                            runpid += " run pid:" + pid.ToString();
+                                            msg.Append("任务成功启动,pid:" + pid.ToString());
                                         }
                                         else
                                         {
@@ -499,7 +504,7 @@ namespace PlanServerService
                                 }
                                 else
                                 {
-                                    msg.Append("\r\n\t任务正运行中");
+                                    msg.Append("\r\n\t" + ret.ToString() + "个任务正运行中");
                                 }
                                 // 记录之，用于计算结束时间
                                 if (timepara.RunMinute > 0)
@@ -517,9 +522,10 @@ namespace PlanServerService
                                 if (isTimeParaSeted)
                                     dbaccess.DelTimePara(task.id, timepara);
 
-                                if (KillProcessByPath(task.exepath) > 0)
+                                var killNum = KillProcessByPath(task.exepath);
+                                if (killNum > 0)
                                 {
-                                    msg.Append("\r\n\t任务成功终止");
+                                    msg.Append("\r\n\t任务成功终止" + killNum.ToString() + "个");
                                     status = ExeStatus.Stopped;
                                 }
                                 else
@@ -547,16 +553,64 @@ namespace PlanServerService
                         break;
                 }
                 // 更新任务运行状态
-                dbaccess.UpdateTaskExeStatus(task.id, status);
+                var needlog = task.runtype == RunType.Restart || task.runtype == RunType.StopAndWait1Min || task.runtype == RunType.ForceStop || task.runtype == RunType.OneTime;
+                dbaccess.UpdateTaskExeStatus(task, status, runpid, needlog);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Output("运行任务时错误", ex);
             }
         }
 
 
+        /// <summary>
+        /// 服务启动时，检测有没有数据库变更脚本要执行
+        /// </summary>
+        static void UpdateDB(Dal dbaccess)
+        {
+            // 服务启动时，检测到这个文件，会执行里面的sql，用于表结构变更等等.
+            // 多个sql以分号分隔
+            string _dbModityFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sqlupdate.sql");
+            if (!File.Exists(_dbModityFile))
+            {
+                return;
+            }
 
+            string allsql;
+            try
+            {
+                using (var sr = new StreamReader(_dbModityFile, Encoding.UTF8))
+                {
+                    allsql = sr.ReadToEnd();
+                }
+            }
+            catch (Exception exp)
+            {
+                Output("UpdateDB 读取文件错误:" + _dbModityFile, exp);
+                return;
+            }
+            foreach (string sql in allsql.Split(';'))
+            {
+                try
+                {
+                    var ret = dbaccess.ExecuteSql(sql);
+                    Output(ret.ToString() + "行\r\nsql:" + sql, "updatedb");
+                }
+                catch (Exception exp)
+                {
+                    Output("UpdateDB sql错误:" + sql, exp);
+                    break;
+                }
+            }
+            try
+            {
+                File.Move(_dbModityFile, _dbModityFile + DateTime.Now.ToString("yyyyMMddHHmmss"));
+            }
+            catch (Exception exp)
+            {
+                Output("UpdateDB 移动文件错误:" + _dbModityFile, exp);
+            }
+        }
 
 
         /*
@@ -567,7 +621,7 @@ namespace PlanServerService
             Dictionary<string, bool> win32ExpProcess)
         {
             int ret = 0;
-
+    
             Process[] allProcess = Process.GetProcesses();
             foreach (Process proc in allProcess)
             {
@@ -637,7 +691,7 @@ namespace PlanServerService
                     }
                 }
             }
-            catch(Exception exp)
+            catch (Exception exp)
             {
                 Output("KillProcessByPath出错 " + procName, exp);
             }
@@ -877,7 +931,7 @@ namespace PlanServerService
             {
                 #region 所有文件管理分支逻辑
 
-                switch ((OperationType) type)
+                switch ((OperationType)type)
                 {
                     case OperationType.DirShow:
                         return DirShow(strArgs);
@@ -910,7 +964,7 @@ namespace PlanServerService
             try
             {
                 // 计划管理分支逻辑
-                switch ((OperationType) type)
+                switch ((OperationType)type)
                 {
                     default:
                         return "err不存在的操作类型:" + type.ToString();
@@ -921,6 +975,8 @@ namespace PlanServerService
                         return DelTasks(strArgs);
                     case OperationType.SaveTasks:
                         return SaveTasks(strArgs);
+                    case OperationType.TaskLog:
+                        return ShowTaskLog(strArgs);
                     case OperationType.Immediate:
                         return ImmediateProcess(strArgs);
 
@@ -985,6 +1041,15 @@ namespace PlanServerService
             return GetAllTask();
         }
 
+        static string ShowTaskLog(string exepath)
+        {
+            if (exepath == string.Empty)
+                return "err未提交任务数据";
+            Dal dbaccess = Dal.Default;
+            var ret = dbaccess.FindTaskLog(exepath);
+            return Common.XmlSerializeToStr(ret);
+        }
+
         /// <summary>
         /// 对程序立即进行的启动或停止操作
         /// </summary>
@@ -1029,7 +1094,7 @@ namespace PlanServerService
                     ret = KillProcessByPath(exepath);
                     if (ret > 0)
                     {
-                        return exepath + " 成功停止";
+                        return exepath + " 成功关闭个数:" + ret.ToString();
                     }
                     else
                     {
@@ -1041,7 +1106,7 @@ namespace PlanServerService
                     ret = KillProcessByPath(exepath);
                     if (ret > 0)
                     {
-                        restartMsg = exepath + " 成功关闭";
+                        restartMsg = exepath + " 成功关闭个数:" + ret.ToString();
                     }
                     else
                     {
@@ -1051,7 +1116,7 @@ namespace PlanServerService
                     ret = CheckAndStartProcess(exepath, exepara);
                     if (ret > 0)
                     {
-                        return restartMsg + " 重启完成";
+                        return restartMsg + " 重启完成,pid:" + ret.ToString();
                     }
                     else
                     {
@@ -1138,7 +1203,7 @@ namespace PlanServerService
                 //{
                 //    return "加载dll失败:" + dllpath;
                 //}
-                
+
                 using (FileStream stream = new FileStream(dllpath, FileMode.Open))
                 using (MemoryStream memStream = new MemoryStream())
                 {
@@ -1187,7 +1252,7 @@ namespace PlanServerService
                     process.memoryPage.ToString(),
                     process.createDate,
                     process.commandLine);
-                
+
             }
             return ret.ToString();
         }
@@ -1216,7 +1281,7 @@ namespace PlanServerService
             {
                 int tmpSort;
                 if (int.TryParse(arrArgs[1], out tmpSort))
-                    sort = (SortType) tmpSort;
+                    sort = (SortType)tmpSort;
             }
 
             // 返回文件前是否要计算MD5
@@ -1240,7 +1305,7 @@ namespace PlanServerService
 
             #region 排序
 
-            Array.Sort(arrDir, delegate(DirectoryInfo a, DirectoryInfo b)
+            Array.Sort(arrDir, delegate (DirectoryInfo a, DirectoryInfo b)
             {
                 switch (sort)
                 {
@@ -1254,7 +1319,7 @@ namespace PlanServerService
                         return -a.LastWriteTime.CompareTo(b.LastWriteTime);
                 }
             });
-            Array.Sort(arrFile, delegate(FileInfo a, FileInfo b)
+            Array.Sort(arrFile, delegate (FileInfo a, FileInfo b)
             {
                 switch (sort)
                 {
@@ -1262,13 +1327,13 @@ namespace PlanServerService
                         return String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
                     case SortType.NameDesc:
                         return -String.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
-                    case SortType.Extention: 
+                    case SortType.Extention:
                         return String.Compare(Path.GetExtension(a.Name), Path.GetExtension(b.Name), StringComparison.OrdinalIgnoreCase);
-                    case SortType.ExtentionDesc: 
+                    case SortType.ExtentionDesc:
                         return -String.Compare(Path.GetExtension(a.Name), Path.GetExtension(b.Name), StringComparison.OrdinalIgnoreCase);
-                    case SortType.Size: 
+                    case SortType.Size:
                         return a.Length.CompareTo(b.Length);
-                    case SortType.SizeDesc: 
+                    case SortType.SizeDesc:
                         return -a.Length.CompareTo(b.Length);
                     case SortType.ModifyTime:
                         return a.LastWriteTime.CompareTo(b.LastWriteTime);
@@ -1316,7 +1381,7 @@ namespace PlanServerService
                 return "err未提供参数";
 
             string[] arrArgs = args.Split('|');
-            if(arrArgs.Length < 4)
+            if (arrArgs.Length < 4)
                 return "err参数不足";
             string dirPath = arrArgs[0];//.Trim();
             if (dirPath == "")
@@ -1507,17 +1572,17 @@ namespace PlanServerService
             if (string.IsNullOrEmpty(args))
                 return "err未提供参数";
             string[] arrArgs = args.Split('|');
-            if(arrArgs.Length < 2)
+            if (arrArgs.Length < 2)
                 return "err参数不足";
 
             string nameOld = arrArgs[0];
             if (isdir && !Directory.Exists(nameOld))
                 return nameOld + "目录不存在";
-            else if(!isdir && !File.Exists(nameOld))
+            else if (!isdir && !File.Exists(nameOld))
                 return nameOld + "文件不存在";
             // ReSharper disable AssignNullToNotNullAttribute
             string nameNew = Path.Combine(Path.GetDirectoryName(nameOld), arrArgs[1]);
-// ReSharper restore AssignNullToNotNullAttribute
+            // ReSharper restore AssignNullToNotNullAttribute
             if (File.Exists(nameNew) || Directory.Exists(nameNew))
             {
                 return nameNew + " 同名文件或目录已经存在";
@@ -1539,7 +1604,7 @@ namespace PlanServerService
             if (string.IsNullOrEmpty(args))
                 return "err未提供参数";
             string[] arrArgs = args.Split('|');
-            if(arrArgs.Length < 2)
+            if (arrArgs.Length < 2)
                 return "参数不足";
 
             string zipName = arrArgs[0];
@@ -1564,8 +1629,8 @@ namespace PlanServerService
             if (!Directory.Exists(dir))
                 return dir + "目录不存在";
 
-            int cntFile=0;
-            int cntDir=0;
+            int cntFile = 0;
+            int cntDir = 0;
             long size = GetDirSize(dir, ref cntFile, ref cntDir);
             return size.ToString() + "|" + cntDir.ToString() + "|" + cntFile.ToString();
         }
@@ -1655,10 +1720,10 @@ namespace PlanServerService
             if (string.IsNullOrEmpty(args))
                 return "err未提供参数";
             string[] arrArgs = args.Split('|');
-            if(arrArgs.Length < 2)
+            if (arrArgs.Length < 2)
                 return "err未提供参数不足";
             string dir = arrArgs[0];
-            if(!Directory.Exists(dir))
+            if (!Directory.Exists(dir))
                 return "err指定的上传目录不存在";
             string savePath = Path.Combine(arrArgs[0], arrArgs[1]);
             if (Directory.Exists(savePath) || File.Exists(savePath))
@@ -1696,14 +1761,14 @@ namespace PlanServerService
             }
             string showsize = dsize.ToString("F2").TrimEnd('0').TrimEnd('.');
             return string.Format("{0}{1}", showsize, unit[idxUnit]);
-        }  
+        }
         #endregion
 
 
         #endregion
 
 
-        
+
         public static void Output(StringBuilder msg, string suffix = null)
         {
             Output(msg.ToString(), suffix);
@@ -1757,7 +1822,7 @@ namespace PlanServerService
                 }
             }
             return _cacheProcess;
-        } 
+        }
 
         static List<ProcessItem> GetAllProcesses()
         {
@@ -1768,8 +1833,9 @@ namespace PlanServerService
             var query = new SelectQuery("SELECT * FROM Win32_Process"); // where Name = 'w3wp.exe'
             using (var searcher = new ManagementObjectSearcher(scope, query))
             {
-                foreach (ManagementObject process in searcher.Get())
+                foreach (var o in searcher.Get())
                 {
+                    var process = (ManagementObject)o;
                     //StringBuilder sbb = new StringBuilder(10000);
                     //foreach (PropertyData property in process.Properties)
                     //{
@@ -1783,7 +1849,7 @@ namespace PlanServerService
                     var mem = Convert.ToInt64(process["WorkingSetSize"]);
                     var memVirtual = Convert.ToInt64(process["VirtualSize"]);
                     var memPage = Convert.ToInt64(process["PagefileUsage"]);
-                    
+
                     ret.Add(new ProcessItem()
                     {
                         commandLine = commandLine,
@@ -1810,6 +1876,7 @@ namespace PlanServerService
 
         public static bool Exists(string name)
         {
+            // 经测试，name不区分大小写，斜杠要做转义
             name = name.Replace("'", "").Replace(@"\", @"\\");
             //http://msdn.microsoft.com/en-us/library/windows/desktop/aa394372(v=vs.85).aspx
             var scope = new ManagementScope(@"\\.\root\cimv2");
@@ -1830,7 +1897,7 @@ namespace PlanServerService
         public string createDate;
         public override string ToString()
         {
-            return string.Format("{0} {1} {2} {3} {4} {5} {6}", 
+            return string.Format("{0} {1} {2} {3} {4} {5} {6}",
                 pid.ToString(),
                 name,
                 commandLine,

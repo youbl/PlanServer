@@ -18,6 +18,10 @@
         /// 立即启动或停止任务
         /// </summary>
         Immediate = 3,
+        /// <summary>
+        /// 显示任务日志
+        /// </summary>
+        TaskLog = 4,
 
 
         /// <summary>

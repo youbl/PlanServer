@@ -107,7 +107,8 @@ namespace PlanServerService
                     response = "err:未设定处理函数";
                 }
 
-                TaskService.Output(endpoint + "\r\n"+ response, "socketResponse");
+                TaskService.Output(endpoint + "\r\n***接收***:"+ recieveFilePath + "\r\n" + recieveMsg + 
+                    "\r\n***响应***:\r\n" + response, "socketResponse");
                 if (socket.Connected)
                 {
                     SocketCommon.SendData(socket, response);

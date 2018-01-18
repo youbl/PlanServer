@@ -304,6 +304,20 @@ function readDb(flg) {
     });
 }
 
+function showTaskLog(obj, flg) {
+    var tr = $(obj).parent();
+    var para = {};
+    para.exepath = $.trim(tr.find("input:eq(1)").val());
+    para.server = $.trim(tr.find("td:eq(0)").text());
+    if (para.exepath.length === 0) {
+        alert("请输入可执行文件路径");
+        return;
+    }
+    ajaxSend(para, flg, function (backdata) {
+
+        showDialog(backdata, null, 1000, 500);
+    });
+}
 
 // 保存行
 function saverow(id, obj, flg) {
@@ -314,11 +328,11 @@ function saverow(id, obj, flg) {
     para.exepath = $.trim(tr.find("input:eq(1)").val());
     para.exepara = $.trim(tr.find("input:eq(2)").val());
     para.server = $.trim(tr.find("td:eq(0)").text());
-    if (para.desc.length == 0) {
+    if (para.desc.length === 0) {
         alert("请输入说明");
         return false;
     }
-    if (para.exepath.length == 0) {
+    if (para.exepath.length === 0) {
         alert("请输入可执行文件路径");
         return false;
     }
@@ -510,12 +524,21 @@ function ajaxError(httpRequest, textStatus, errorThrown) {
     hideDialog();
     alert(textStatus + errorThrown);
 }
-function showDialog(html, confirmClick) {
+function showDialog(html, confirmClick, width, height) {
     $("#dialogContent").html(html);
 
+    if (!width) {
+        if (confirmClick) {
+            width = 600;
+            height = 300;
+        } else {
+            width = 200;
+            height = 100;
+        }
+    }
     if (confirmClick) {
-        $('#dialog').dialog('option', 'width', 600);
-        $('#dialog').dialog('option', 'height', 300);
+        $('#dialog').dialog('option', 'width', width);
+        $('#dialog').dialog('option', 'height', height);
         $('#dialog').dialog('option', 'buttons', {
             "确认按钮": confirmClick,
             Cancel: function() {
@@ -524,8 +547,8 @@ function showDialog(html, confirmClick) {
         });
     } else {
         $('#dialog').dialog('option', 'buttons', []);
-        $('#dialog').dialog('option', 'width', 200);
-        $('#dialog').dialog('option', 'height', 100);
+        $('#dialog').dialog('option', 'width', width);
+        $('#dialog').dialog('option', 'height', height);
     }
     $("#dialog").dialog('open');
 }

@@ -120,6 +120,9 @@ namespace PlanServerTaskManager.Web
                         case OperationType.DelTasks:
                             DeleteById();
                             break;
+                        case OperationType.TaskLog:
+                            ShowTaskLog();
+                            break;
 
 
                         case OperationType.Immediate:
@@ -262,6 +265,31 @@ namespace PlanServerTaskManager.Web
             Response.Write(msg);
         }
 
+        void ShowTaskLog()
+        {
+            var server = Request.Form["server"];
+            var exepath = Request.Form["exepath"];
+            string msgother = TaskClient.DoTaskOther(server, 23244, OperationType.TaskLog, exepath);
+            if (msgother.StartsWith("err", StringComparison.OrdinalIgnoreCase))
+            {
+                msgother = (msgother.Substring(3));
+                Response.Write(msgother);
+                return;
+            }
+            var logs = Common.XmlDeserializeFromStr<List<TaskLog>>(msgother);
+            if (logs == null || logs.Count <= 0)
+            {
+                Response.Write(exepath + " 还没有运行日志");
+                return;
+            }
+            var ret = new StringBuilder("<span style='color:red;font-weight:bold;'>" + exepath + " 运行日志:</span><br/>");
+            foreach (var log in logs)
+            {
+                ret.AppendFormat("{0} {1}<br/>", log.instime.ToString("yyyy-MM-dd HH:mm:ss"), log.log);
+            }
+            Response.Write(ret.ToString());
+        }
+
         void SaveTask()
         {
             TaskItem task = new TaskItem();
@@ -359,12 +387,13 @@ namespace PlanServerTaskManager.Web
     <td><div class='input-3'><input type='text' title='{5}' style='width:97%;' value='{5}' onclick='setPara(this);' readonly='readonly' /></div></td>
     <td><a href='#{0}' onclick='saverow({0},this,1);'>存</a>|<a href='javascript:void(0);' onclick='delrow({0},this,2);'>删</a></td>
     <td><a href='#{0}' onclick='operateImm(this,1,3);'>启</a>|<a href='javascript:void(0);' onclick='operateImm(this,2,3);'>停</a>|<a href='javascript:void(0);' onclick='operateImm(this,3,3);' title='停止并重启任务'>重</a></td>
-    <td title='最近pid:{7}；创建时间:{9}；累计启动次数:{6}'>{10}</td>
+    <td title='最近pid:{7}；创建时间:{9}；累计启动次数:{6}' onclick='showTaskLog(this,{13});' style='cursor:pointer;'>{10}</td>
     <td>{8}</td>
     <th>{12}</th>
 </tr>",
-                                        item.id, item.desc, item.exepath, item.exepara, (int)item.runtype,
-                                        item.taskpara, item.runcount, item.pid, item.pidtime, item.instime, status, task.ip, idx.ToString());
+                            item.id, item.desc, item.exepath, item.exepara, (int)item.runtype,
+                            item.taskpara, item.runcount, item.pid, item.pidtime, item.instime, status, task.ip, idx.ToString(),
+                            ((int)OperationType.TaskLog).ToString());
                         idx++;
                     }
                 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
 using System.IO;
+using System.Text;
 
 namespace PlanServerService
 {
@@ -60,7 +61,6 @@ namespace PlanServerService
             {
                 CreateDb(Constr);
             }
-
         }
 
         static void CreateDb(string dbFilename)
@@ -102,16 +102,29 @@ immediate int default 0 not null
                 // 创建进程定时运行参数表，用于记录定时运行的结束时间，以便判断
                 sql = "create table TaskPara(tid int,wd int, shour int, smin int, runmin int, starttime varchar(50))";
                 SQLiteHelper.ExecuteNonQuery(dbFilename, sql);
+
+                // 创建进程状态变更日志表
+                sql = @"create table TaskLog(
+    id INTEGER PRIMARY KEY autoincrement, 
+    exepath varchar(500) not null COLLATE NOCASE, 
+    log varchar(500) not null, 
+    instime TIMESTAMP not null default (datetime('now', 'localtime'))
+)";
+                SQLiteHelper.ExecuteNonQuery(dbFilename, sql);
+
+                // 创建索引 exepath
+                sql = "create index idx_exepath on TaskLog(exepath)";
+                SQLiteHelper.ExecuteNonQuery(dbFilename, sql);
             }
         }
         //// 为任务表添加进程管理器里的起始时间字段
         //static void AddProcessTimeCol(string dbFilename)
         //{
         //    string sql = "select sql from sqlite_master where name='tasks' and type='table'";
-            
+
         //}
-        
-        #region 维护程序专用的方法
+
+        #region 维护程序访问任务专用的方法
         /// <summary>
         /// 获取最近检查时间
         /// </summary>
@@ -138,11 +151,11 @@ VALUES
     ,@desc)";
 
             SQLiteParameter[] para = new[] {
-                new SQLiteParameter("@exepath",DbType.String){Value = task.exepath}, 
-                new SQLiteParameter("@exepara",DbType.String){Value = task.exepara}, 
-                new SQLiteParameter("@runtype",DbType.Int32){Value = task.runtype}, 
-                new SQLiteParameter("@taskpara",DbType.String){Value = task.taskpara}, 
-                new SQLiteParameter("@desc",DbType.String){Value = task.desc}, 
+                new SQLiteParameter("@exepath",DbType.String){Value = task.exepath},
+                new SQLiteParameter("@exepara",DbType.String){Value = task.exepara},
+                new SQLiteParameter("@runtype",DbType.Int32){Value = task.runtype},
+                new SQLiteParameter("@taskpara",DbType.String){Value = task.taskpara},
+                new SQLiteParameter("@desc",DbType.String){Value = task.desc},
             };
             lock (lockobj)
             {
@@ -161,12 +174,12 @@ SET [exepath] = @exepath
 WHERE id = @id
 ";
             SQLiteParameter[] para = new[] {
-                new SQLiteParameter("@exepath",DbType.String){Value = task.exepath}, 
-                new SQLiteParameter("@exepara",DbType.String){Value = task.exepara}, 
-                new SQLiteParameter("@runtype",DbType.Int32){Value = (int)task.runtype}, 
-                new SQLiteParameter("@taskpara",DbType.String){Value = task.taskpara}, 
-                new SQLiteParameter("@desc",DbType.String){Value = task.desc}, 
-                new SQLiteParameter("@id",DbType.Int64){Value = task.id}, 
+                new SQLiteParameter("@exepath",DbType.String){Value = task.exepath},
+                new SQLiteParameter("@exepara",DbType.String){Value = task.exepara},
+                new SQLiteParameter("@runtype",DbType.Int32){Value = (int)task.runtype},
+                new SQLiteParameter("@taskpara",DbType.String){Value = task.taskpara},
+                new SQLiteParameter("@desc",DbType.String){Value = task.desc},
+                new SQLiteParameter("@id",DbType.Int64){Value = task.id},
             };
             int i;
             lock (lockobj)
@@ -184,7 +197,7 @@ WHERE id = @id
         {
             string sql = @"DELETE FROM [tasks] WHERE id = @id";
             SQLiteParameter[] para = new[] {
-                new SQLiteParameter("@id",DbType.Int64){Value = id}, 
+                new SQLiteParameter("@id",DbType.Int64){Value = id},
             };
             lock (lockobj)
             {
@@ -213,7 +226,7 @@ WHERE id = @id
         {
             string sql = "update lastrun set dt = @dt";
             SQLiteParameter[] para = new[] {
-                new SQLiteParameter("@dt",DbType.String){Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}, 
+                new SQLiteParameter("@dt",DbType.String){Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")},
             };
             lock (lockobj)
             {
@@ -232,16 +245,16 @@ WHERE id = @id
         {
             string sql = @"UPDATE [tasks] SET runtype = @totype WHERE id = @id and runtype = @fromtype";
             SQLiteParameter[] para = new[] {
-                new SQLiteParameter("@id",DbType.Int64){Value = taskid}, 
-                new SQLiteParameter("@totype",DbType.Int32){Value = (int)totype}, 
-                new SQLiteParameter("@fromtype", DbType.Int32){Value = (int)fromtype}, 
+                new SQLiteParameter("@id",DbType.Int64){Value = taskid},
+                new SQLiteParameter("@totype",DbType.Int32){Value = (int)totype},
+                new SQLiteParameter("@fromtype", DbType.Int32){Value = (int)fromtype},
             };
             lock (lockobj)
             {
                 return SQLiteHelper.ExecuteNonQuery(Constr, sql, para) > 0;
             }
         }
-       
+
         /// <summary>
         /// 任务运行起来时，把任务的进程id更新到数据库
         /// </summary>
@@ -252,9 +265,9 @@ WHERE id = @id
         {
             string sql = @"UPDATE [tasks] SET [pid] = @pid, pidtime = @time,[runcount] = runcount+1 WHERE id = @id";
             SQLiteParameter[] para = new[] {
-                new SQLiteParameter("@id",DbType.Int64){Value = taskid}, 
-                new SQLiteParameter("@pid",DbType.Int32){Value = pid}, 
-                new SQLiteParameter("@time", DbType.DateTime){Value = DateTime.Now}, 
+                new SQLiteParameter("@id",DbType.Int64){Value = taskid},
+                new SQLiteParameter("@pid",DbType.Int32){Value = pid},
+                new SQLiteParameter("@time", DbType.DateTime){Value = DateTime.Now},
             };
             lock (lockobj)
             {
@@ -262,18 +275,34 @@ WHERE id = @id
             }
         }
 
-
-        public bool UpdateTaskExeStatus(int taskid, ExeStatus status)
+        /// <summary>
+        /// 更新任务的状态
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="status"></param>
+        /// <param name="pidMsg"></param>
+        /// <param name="needlog">是否强行记录日志</param>
+        /// <returns></returns>
+        public bool UpdateTaskExeStatus(TaskItem task, ExeStatus status, string pidMsg, bool needlog = false)
         {
+            int taskid = task.id;
             string sql = @"UPDATE [tasks] SET [exestatus] = @status WHERE id = @id";
             SQLiteParameter[] para = new[] {
-                new SQLiteParameter("@id",DbType.Int64){Value = taskid}, 
-                new SQLiteParameter("@status",DbType.Int32){Value = status}, 
+                new SQLiteParameter("@id",DbType.Int64){Value = taskid},
+                new SQLiteParameter("@status",DbType.Int32){Value = status},
             };
+            bool ret;
             lock (lockobj)
             {
-                return SQLiteHelper.ExecuteNonQuery(Constr, sql, para) > 0;
+                ret = SQLiteHelper.ExecuteNonQuery(Constr, sql, para) > 0;
             }
+            if (ret && (task.status != status || needlog))
+            {
+                // 添加状态变更日志
+                pidMsg = task.status.ToString() + "=>" + status.ToString() + " " + pidMsg;
+                AddTaskLog(task.exepath, pidMsg);
+            }
+            return ret;
         }
 
         /// <summary>
@@ -328,7 +357,7 @@ WHERE tid=@tid
             {
                 obj = SQLiteHelper.ExecuteScalar(Constr, sql, para);
             }
-            if(obj == null || obj == DBNull.Value)
+            if (obj == null || obj == DBNull.Value)
                 return default(DateTime);
             return DateTime.Parse(obj.ToString());
         }
@@ -365,7 +394,7 @@ WHERE tid=@tid
         {
             string sql = @"UPDATE [tasks] SET [immediate] = 0 WHERE id = @id";
             SQLiteParameter[] para = new[] {
-                new SQLiteParameter("@id",DbType.Int64){Value = taskid}, 
+                new SQLiteParameter("@id",DbType.Int64){Value = taskid},
             };
             lock (lockobj)
             {
@@ -373,7 +402,59 @@ WHERE tid=@tid
             }
         }
 
+
+        /// <summary>
+        /// 添加任务运行日志
+        /// </summary>
+        /// <param name="exepath"></param>
+        /// <param name="log"></param>
+        /// <returns></returns>
+        public bool AddTaskLog(string exepath, string log)
+        {
+            string sql = @"INSERT INTO [TaskLog] ([exepath],[log]) VALUES(@exepath, @log)";
+            SQLiteParameter[] para = new[] {
+                new SQLiteParameter("@exepath",DbType.String){Value = exepath},
+                new SQLiteParameter("@log",DbType.String){Value = log},
+            };
+            lock (lockobj)
+            {
+                return SQLiteHelper.ExecuteNonQuery(Constr, sql, para) > 0;
+            }
+        }
+        /// <summary>
+        /// 查找任务运行日志，倒序返回
+        /// </summary>
+        /// <param name="exepath"></param>
+        /// <returns></returns>
+        public List<TaskLog> FindTaskLog(string exepath)
+        {
+            var ret = new List<TaskLog>();
+            string sql = @"SELECT * FROM [TaskLog] WHERE [exepath]=@exepath ORDER BY id DESC";
+            SQLiteParameter[] para = new[] {
+                new SQLiteParameter("@exepath",DbType.String){Value = exepath},
+            };
+            lock (lockobj)
+            {
+                using (var reader = SQLiteHelper.ExecuteReader(Constr, sql, para))
+                {
+                    while (reader.Read())
+                    {
+                        var item = new TaskLog
+                        {
+                            id = (int)(long)reader["id"],
+                            exepath = Convert.ToString(reader["exepath"]).Trim(),
+                            log = Convert.ToString(reader["log"]).Trim(),
+                            instime = (DateTime)reader["instime"],
+                        };
+                        ret.Add(item);
+                    }
+                }
+            }
+            return ret;
+        }
         #endregion
+
+
 
         /// <summary>
         /// 清空全部 或 指定任务的任务结束参数表
@@ -416,33 +497,39 @@ WHERE tid=@tid
         public List<TaskItem> GetAllTask()
         {
             string sql = @"SELECT * FROM [tasks] ORDER BY [id]";// WHERE [runtype] > 0
-            var reader = SQLiteHelper.ExecuteReader(Constr, sql);
             List<TaskItem> ret = new List<TaskItem>();
-            List<string> colnames = GetColNames(reader);
-            while (reader.Read())
+            lock (lockobj)
             {
-                var task = new TaskItem
+                using (var reader = SQLiteHelper.ExecuteReader(Constr, sql))
                 {
-                    id = (int)(long)reader["id"],
-                    exepath = Convert.ToString(reader["exepath"]).Trim(),
-                    exepara = Convert.ToString(reader["exepara"]).Trim(),
-                    runtype = (RunType)(int)reader["runtype"],
-                    taskpara = Convert.ToString(reader["taskpara"]).Trim(),
-                    desc = Convert.ToString(reader["desc"]).Trim(),
-                    runcount = (int)reader["runcount"],
-                    pid = (int)reader["pid"],
-                    instime = (DateTime)reader["instime"],
-                    status = (ExeStatus)reader["exestatus"],
-                    immediate = colnames.Contains("immediate") ? (ImmediateType)reader["immediate"] : ImmediateType.None,
-                };
-                object pidtime = reader["pidtime"];
-                if (pidtime == null || pidtime == DBNull.Value)
-                    task.pidtime = DateTime.MinValue;
-                else
-                    task.pidtime = (DateTime)pidtime;
-                ret.Add(task);
+                    List<string> colnames = GetColNames(reader);
+                    while (reader.Read())
+                    {
+                        var task = new TaskItem
+                        {
+                            id = (int)(long)reader["id"],
+                            exepath = Convert.ToString(reader["exepath"]).Trim(),
+                            exepara = Convert.ToString(reader["exepara"]).Trim(),
+                            runtype = (RunType)(int)reader["runtype"],
+                            taskpara = Convert.ToString(reader["taskpara"]).Trim(),
+                            desc = Convert.ToString(reader["desc"]).Trim(),
+                            runcount = (int)reader["runcount"],
+                            pid = (int)reader["pid"],
+                            instime = (DateTime)reader["instime"],
+                            status = (ExeStatus)reader["exestatus"],
+                            immediate = colnames.Contains("immediate")
+                                ? (ImmediateType)reader["immediate"]
+                                : ImmediateType.None,
+                        };
+                        object pidtime = reader["pidtime"];
+                        if (pidtime == null || pidtime == DBNull.Value)
+                            task.pidtime = DateTime.MinValue;
+                        else
+                            task.pidtime = (DateTime)pidtime;
+                        ret.Add(task);
+                    }
+                }
             }
-            reader.Close();
             return ret;
         }
 

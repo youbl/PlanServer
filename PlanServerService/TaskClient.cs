@@ -109,6 +109,11 @@ namespace PlanServerService
             }
             return null;
         }
+
+        public static string DoTaskOther(string ip, int port, OperationType type, string args)
+        {
+            return SendToServer(ip, port, type, args);
+        }
         #endregion
 
 

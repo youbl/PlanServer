@@ -28,7 +28,7 @@ namespace PlanServerWinService
             {
                 // 端口监听，处理管理程序的进程
                 var method = new SocketServer.OperationDelegate(TaskService.ServerOperation);
-                new Thread(SocketServer.ListeningBySocket).Start(method);
+                new Thread(SocketServer.ListeningBySocket) { IsBackground = true }.Start(method);
                 msg = " 开始监听端口：" + TaskService.ListenPort;
                 TaskService.Output(msg);
             }
