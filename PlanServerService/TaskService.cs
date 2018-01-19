@@ -88,21 +88,43 @@ namespace PlanServerService
                     if (tasks != null && tasks.Any())
                     {
                         Output("找到" + tasks.Count.ToString() + "个任务");
+                        var processes = ProcessItem.GetProcessesAndCache();
 
                         foreach (TaskItem task in tasks)
                         {
-                            object[] para = new object[] { task, dbaccess };
+                            object[] para = new object[] {task, processes};
                             Thread thre = new Thread(RunTask);
                             threads.Add(thre);
                             thre.Start(para);
                         }
+
+                        // 阻塞并等待所有线程结束
+                        foreach (Thread thread in threads)
+                        {
+                            thread.Join();
+                        }
+
+                        var processesLater = ProcessItem.GetProcessesAndCache(false);
+                        foreach (TaskItem task in tasks)
+                        {
+                            var proLater = processesLater.FirstOrDefault(item => item.exePath.Equals(task.exepath, StringComparison.OrdinalIgnoreCase));
+                            var oldpid = task.OldPid;
+                            var newpid = proLater != null ? proLater.pid : 0;
+                            if (newpid > 0 || task.pid != 0)
+                            {
+                                // 更新任务的pid
+                                dbaccess.UpdateTaskProcessId(task.id, newpid);
+                            }
+
+                            var needlog = oldpid != newpid || task.pid != newpid || task.status != task.NewStatus;
+                            if (needlog)
+                            {
+                                var pidMsg = task.status.ToString() + "=>" + task.NewStatus.ToString() + "(" + task.runtype.ToString() + ") " + task.RunMsg;
+                                dbaccess.AddTaskLog(task.exepath, pidMsg);
+                            }
+                        }
                     }
 
-                    // 阻塞并等待所有线程结束
-                    foreach (Thread thread in threads)
-                    {
-                        thread.Join();
-                    }
                     // 一轮完成，更新进程最后检查时间
                     dbaccess.UpdateLastRuntime();
                 }
@@ -126,7 +148,8 @@ namespace PlanServerService
                 string runpid = "";
                 var argstmp = (object[])args;
                 TaskItem task = (TaskItem)argstmp[0];
-                Dal dbaccess = (Dal)argstmp[1];
+                var allProcess = (List<ProcessItem>)argstmp[1];
+                Dal dbaccess = Dal.Default;
 
                 // 可执行文件不存在
                 if (!File.Exists(task.exepath))
@@ -156,7 +179,8 @@ namespace PlanServerService
                 }
 
                 // 根据exe路径，查找运行中的进程
-                var processes = ProcessItem.GetProcessByPath(task.exepath);
+                // var processes = ProcessItem.GetProcessByPath(task.exepath);
+                var processes = allProcess.FindAll(item => item.exePath.Equals(task.exepath, StringComparison.OrdinalIgnoreCase));
                 var processCnt = processes.Count;
 
                 int ret;
@@ -533,23 +557,13 @@ namespace PlanServerService
                 }
 
                 // 更新任务运行状态
-                var processesLater = ProcessItem.GetProcessByPath(task.exepath);
-                var newpid = processesLater.Count > 0 ? processesLater[0].pid : 0;
-                if (newpid > 0 || task.pid != 0)
-                {
-                    // 更新任务的pid
-                    dbaccess.UpdateTaskProcessId(task.id, newpid);
-                }
+                dbaccess.UpdateTaskExeStatus(task, status, runpid);
+
+                // 全部进程结束后统一处理日志
                 var oldpid = processes.Count > 0 ? processes[0].pid : 0;
-
-                var needlog = processesLater.Count != processCnt || oldpid != newpid;
-                if (!needlog)
-                {
-                    needlog = task.pid != newpid;
-                }
-
-                //var needlog = task.runtype == RunType.Restart || task.runtype == RunType.StopAndWait1Min || task.runtype == RunType.ForceStop || task.runtype == RunType.OneTime;
-                dbaccess.UpdateTaskExeStatus(task, status, runpid, needlog);
+                task.NewStatus = status;
+                task.OldPid = oldpid;
+                task.RunMsg = runpid;
             }
             catch (Exception ex)
             {
@@ -993,8 +1007,6 @@ namespace PlanServerService
                 return "文件不存在:" + exepath;
             }
 
-            var processes = ProcessItem.GetProcessByPath(exepath);
-
             string exepara = args[2];
             int ret;
             switch ((ImmediateType)imtype)
@@ -1013,7 +1025,8 @@ namespace PlanServerService
                         return exepath + " 运行中，无需启动";
                     }
                 case ImmediateType.Stop:
-                    ret = KillProcesses(processes);
+                    var processes1 = ProcessItem.GetProcessByPath(exepath);
+                    ret = KillProcesses(processes1);
                     if (ret > 0)
                     {
                         return exepath + " 成功关闭个数:" + ret.ToString();
@@ -1025,7 +1038,8 @@ namespace PlanServerService
                 case ImmediateType.ReStart:
                     string restartMsg;
                     // 杀死进程
-                    ret = KillProcesses(processes);
+                    var processes2 = ProcessItem.GetProcessByPath(exepath);
+                    ret = KillProcesses(processes2);
                     if (ret > 0)
                     {
                         restartMsg = exepath + " 成功关闭个数:" + ret.ToString();
@@ -1718,11 +1732,17 @@ namespace PlanServerService
         static object _lock = new object();
 
         /// <summary>
-        /// 返回所有进程列表，并缓存2秒，避免频繁读取服务器进程影响性能
+        /// 返回所有进程列表，并缓存2秒，避免频繁读取服务器进程影响性能.
+        /// WmiPrvSE进程可能占用高CPU
         /// </summary>
         /// <returns></returns>
-        public static List<ProcessItem> GetProcessesAndCache()
+        public static List<ProcessItem> GetProcessesAndCache(bool cache = true)
         {
+            if (!cache)
+            {
+                _cacheProcess = null;
+            }
+
             var now = DateTime.Now;
             // bug测试代码
             //string str = string.Format("cache::::{0} {1} {2}", 
@@ -1797,7 +1817,8 @@ namespace PlanServerService
         }
 
         /// <summary>
-        /// 判断指定进程是否运行中
+        /// 判断指定进程是否运行中。
+        /// WmiPrvSE进程可能占用高CPU
         /// </summary>
         /// <param name="exepath">exe全路径</param>
         /// <returns></returns>
@@ -1816,7 +1837,8 @@ namespace PlanServerService
 
 
         /// <summary>
-        /// 返回指定路径的进程
+        /// 返回指定路径的进程。
+        /// WmiPrvSE进程可能占用高CPU
         /// </summary>
         /// <param name="exepath">exe全路径</param>
         /// <returns></returns>

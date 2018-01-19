@@ -280,9 +280,8 @@ WHERE id = @id
         /// <param name="task"></param>
         /// <param name="status"></param>
         /// <param name="pidMsg"></param>
-        /// <param name="needlog">是否强行记录日志</param>
         /// <returns></returns>
-        public bool UpdateTaskExeStatus(TaskItem task, ExeStatus status, string pidMsg, bool needlog = false)
+        public bool UpdateTaskExeStatus(TaskItem task, ExeStatus status, string pidMsg)
         {
             int taskid = task.id;
             string sql = @"UPDATE [tasks] SET [exestatus] = @status WHERE id = @id AND [exestatus] <> @status";
@@ -294,12 +293,6 @@ WHERE id = @id
             lock (lockobj)
             {
                 ret = SQLiteHelper.ExecuteNonQuery(Constr, sql, para) > 0;
-            }
-            if (ret && (task.status != status || needlog))
-            {
-                // 添加状态变更日志
-                pidMsg = task.status.ToString() + "=>" + status.ToString() + "(" + task.runtype.ToString() + ") " + pidMsg;
-                AddTaskLog(task.exepath, pidMsg);
             }
             return ret;
         }
