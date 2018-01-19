@@ -116,8 +116,6 @@ insip varchar(100) not null
                 // 创建ip和server的唯一索引
                 sql = "create unique index unq_ip_server on IpRight(ip,serverid)";
                 SQLiteHelper.ExecuteNonQuery(dbFilename, sql);
-
-                //alter table tasks add immediate int default 0 not null
             }
         }
 

@@ -85,9 +85,8 @@ runcount int default 0 not null,
 pid int default 0 not null,
 pidtime TIMESTAMP null,
 instime TIMESTAMP not null default (datetime('now', 'localtime')),
-exestatus int default 0 not null,
-immediate int default 0 not null
-)";//alter table tasks add immediate int default 0 not null
+exestatus int default 0 not null
+)";
                 SQLiteHelper.ExecuteNonQuery(dbFilename, sql);
                 // 创建唯一索引，一个exepath只能用一次
                 sql = "create unique index unq_exepath on tasks(exepath)";
@@ -263,7 +262,7 @@ WHERE id = @id
         /// <returns></returns>
         public bool UpdateTaskProcessId(int taskid, int pid)
         {
-            string sql = @"UPDATE [tasks] SET [pid] = @pid, pidtime = @time,[runcount] = runcount+1 WHERE id = @id";
+            string sql = @"UPDATE [tasks] SET [pid] = @pid, pidtime = @time,[runcount] = runcount+1 WHERE id = @id AND [pid] <> @pid";
             SQLiteParameter[] para = new[] {
                 new SQLiteParameter("@id",DbType.Int64){Value = taskid},
                 new SQLiteParameter("@pid",DbType.Int32){Value = pid},
@@ -286,7 +285,7 @@ WHERE id = @id
         public bool UpdateTaskExeStatus(TaskItem task, ExeStatus status, string pidMsg, bool needlog = false)
         {
             int taskid = task.id;
-            string sql = @"UPDATE [tasks] SET [exestatus] = @status WHERE id = @id";
+            string sql = @"UPDATE [tasks] SET [exestatus] = @status WHERE id = @id AND [exestatus] <> @status";
             SQLiteParameter[] para = new[] {
                 new SQLiteParameter("@id",DbType.Int64){Value = taskid},
                 new SQLiteParameter("@status",DbType.Int32){Value = status},
@@ -299,7 +298,7 @@ WHERE id = @id
             if (ret && (task.status != status || needlog))
             {
                 // 添加状态变更日志
-                pidMsg = task.status.ToString() + "=>" + status.ToString() + " " + pidMsg;
+                pidMsg = task.status.ToString() + "=>" + status.ToString() + "(" + task.runtype.ToString() + ") " + pidMsg;
                 AddTaskLog(task.exepath, pidMsg);
             }
             return ret;
@@ -389,19 +388,7 @@ WHERE tid=@tid
                 return SQLiteHelper.ExecuteNonQuery(Constr, sql, para) > 0;
             }
         }
-
-        public bool ClearTaskImmediate(int taskid)
-        {
-            string sql = @"UPDATE [tasks] SET [immediate] = 0 WHERE id = @id";
-            SQLiteParameter[] para = new[] {
-                new SQLiteParameter("@id",DbType.Int64){Value = taskid},
-            };
-            lock (lockobj)
-            {
-                return SQLiteHelper.ExecuteNonQuery(Constr, sql, para) > 0;
-            }
-        }
-
+        
 
         /// <summary>
         /// 添加任务运行日志
@@ -517,9 +504,6 @@ WHERE tid=@tid
                             pid = (int)reader["pid"],
                             instime = (DateTime)reader["instime"],
                             status = (ExeStatus)reader["exestatus"],
-                            immediate = colnames.Contains("immediate")
-                                ? (ImmediateType)reader["immediate"]
-                                : ImmediateType.None,
                         };
                         object pidtime = reader["pidtime"];
                         if (pidtime == null || pidtime == DBNull.Value)

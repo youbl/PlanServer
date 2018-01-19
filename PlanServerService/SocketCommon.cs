@@ -9,20 +9,14 @@ namespace PlanServerService
 {
     public static class SocketCommon
     {
-        private static bool IsDebug;
+        private static bool IsDebug = Common.IsDebug;
         /// <summary>
         /// 传输文件时，临时存放的文件全路径
         /// </summary>
         public static string TmpDir;
         static SocketCommon()
         {
-            string tmp = ConfigurationManager.AppSettings["IsDebug"];
-            if (!string.IsNullOrEmpty(tmp) && (tmp == "1" || tmp.Equals("true", StringComparison.OrdinalIgnoreCase)))
-                IsDebug = true;
-            else
-                IsDebug = false;
-
-            tmp = ConfigurationManager.AppSettings["PlanWritePath"];
+            var tmp = ConfigurationManager.AppSettings["PlanWritePath"];
             if (!string.IsNullOrEmpty(tmp))
                 TmpDir = tmp;
             else

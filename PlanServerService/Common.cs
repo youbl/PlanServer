@@ -22,6 +22,15 @@ namespace PlanServerService
                 EnableFileAdmin = false;
             else
                 EnableFileAdmin = true;
+
+            SocketKey = ConfigurationManager.AppSettings["PlanSocketKey"] ?? "PlanSocketKey";
+
+            tmp = ConfigurationManager.AppSettings["IsDebug"];
+            if (!string.IsNullOrEmpty(tmp) && (tmp == "1" || tmp.Equals("true", StringComparison.OrdinalIgnoreCase)))
+                IsDebug = true;
+            else
+                IsDebug = false;
+
         }
 
 
@@ -29,9 +38,18 @@ namespace PlanServerService
         public static readonly string ServerName = Dns.GetHostName();
 
         /// <summary>
+        /// Socket通讯时附加的md5密钥
+        /// </summary>
+        public static string SocketKey { get; private set; }
+        /// <summary>
         /// 是否允许文件管理
         /// </summary>
-        public static bool EnableFileAdmin;
+        public static bool EnableFileAdmin { get; private set; }
+
+        /// <summary>
+        /// 是否调试
+        /// </summary>
+        public static bool IsDebug { get; private set; }
 
         /// <summary>
         /// 把对象序列化为Xml字符串
@@ -143,14 +161,20 @@ namespace PlanServerService
         {
             if (paras == null || paras.Length == 0)
                 throw new ArgumentException("参数不能为空");
-
+            
             string spliter = "_&_";
             StringBuilder sb = new StringBuilder(200);
             foreach (object para in paras)
             {
                 sb.AppendFormat("{0}{1}", para, spliter);
             }
-            return MD5_Encrypt(sb.ToString(), Encoding.UTF8);
+            sb.Append(SocketKey);
+            var ret = MD5_Encrypt(sb.ToString(), Encoding.UTF8);
+            if (IsDebug)
+            {
+                TaskService.Output(sb + "\r\n" + ret, "socketDetail");
+            }
+            return ret;
         }
 
         /// <summary>
@@ -210,7 +234,7 @@ namespace PlanServerService
                 foreach (IPAddress ipa in IpEntry.AddressList)
                 {
                     if (ipa.AddressFamily == AddressFamily.InterNetwork)
-                        ips.AppendFormat("{0};", ipa.ToString());
+                        ips.AppendFormat("{0};", ipa);
                 }
                 return ips.ToString();
             }

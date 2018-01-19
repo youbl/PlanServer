@@ -155,27 +155,24 @@ namespace PlanServerService
                                      task.exepath, task.exepara, task.runcount.ToString());
                 }
 
+                // 根据exe路径，查找运行中的进程
+                var processes = ProcessItem.GetProcessByPath(task.exepath);
+                var processCnt = processes.Count;
+
                 int ret;
-                List<ProcessItem> processes;
                 switch (task.runtype)
                 {
                     case RunType.Stop:
 
                         #region 不启动，不停止
-
-                        ret = FindProcessNumByPath(task.exepath);
-                        if (ret > 0)
+                        if (processCnt > 0)
                         {
-                            msg.Append("\r\n\t" + ret.ToString() + "个任务运行中，前次任务尚未完成");
-                            processes = FindProcessByPath(task.exepath);
-                            if (processes != null && processes.Count > 0)
+                            msg.Append("\r\n\t" + processCnt.ToString() + "个任务运行中，前次任务尚未完成");
+                            runpid += " run pid: ";
+                            foreach (ProcessItem item in processes)
                             {
-                                runpid += " run pid: ";
-                                foreach (ProcessItem item in processes)
-                                {
-                                    runpid += item.pid.ToString() + ", ";
-                                    msg.AppendFormat("\r\n\t\t{0}", item);
-                                }
+                                runpid += item.pid.ToString() + ", ";
+                                msg.AppendFormat("\r\n\t\t{0}", item);
                             }
                             status = ExeStatus.Running;
                         }
@@ -192,28 +189,25 @@ namespace PlanServerService
                     case RunType.Restart:
 
                         #region 重启
-
                         // 重启后要把它设置为一直运行
                         dbaccess.UpdateTaskType(task.id, task.runtype, RunType.Always);
-
-                        processes = FindProcessByPath(task.exepath);
-
-                        // 杀死并重启进程
-                        ret = KillProcessByPath(task.exepath);
-                        if (ret > 0)
+                        if (processCnt > 0)
                         {
+                            // 杀死进程
+                            ret = KillProcesses(processes);
                             msg.Append("\r\n\t已停止" + ret.ToString() + "个,");
                         }
                         else
                         {
                             msg.Append("\r\n\t进程不存在，");
                         }
-                        ret = StartProcess(task, dbaccess);
+                        // 启动进程
+                        ret = CheckAndStartProcess(task.exepath, task.exepara);
                         if (ret > 0)
                         {
                             msg.Append("重启完成,pid:" + ret.ToString());
                             runpid += "run pid:" + ret.ToString();
-                            if (processes != null && processes.Count > 0)
+                            if (processes.Count > 0)
                             {
                                 runpid += ", killed: ";
                                 foreach (ProcessItem item in processes)
@@ -241,22 +235,18 @@ namespace PlanServerService
                         // 重启后要把它设置为一直运行
                         dbaccess.UpdateTaskType(task.id, task.runtype, RunType.Always);
 
-                        processes = FindProcessByPath(task.exepath);
-
-                        // 杀死并重启进程
-                        ret = KillProcessByPath(task.exepath);
-                        if (ret > 0)
+                        if (processCnt > 0)
                         {
+                            // 杀死进程
+                            ret = KillProcesses(processes);
                             Output(task.desc + " " + task.exepath + "已停止" + ret.ToString() + "个，等1分钟后重启...");
-                            if (processes != null && processes.Count > 0)
+                            runpid += "  killed: ";
+                            foreach (ProcessItem item in processes)
                             {
-                                runpid += ", killed: ";
-                                foreach (ProcessItem item in processes)
-                                {
-                                    runpid += item.pid.ToString() + ", ";
-                                    msg.AppendFormat("\r\n\t\t{0}", item);
-                                }
+                                runpid += item.pid.ToString() + ", ";
+                                msg.AppendFormat("\r\n\t\t{0}", item);
                             }
+
                             msg.Append("\r\n\t已停止，等1分钟，");
                         }
                         else
@@ -265,7 +255,8 @@ namespace PlanServerService
                             msg.Append("\r\n\t进程不存在，等1分钟，");
                         }
                         Thread.Sleep(TimeSpan.FromMinutes(1));
-                        ret = StartProcess(task, dbaccess);
+
+                        ret = CheckAndStartProcess(task.exepath, task.exepara);
                         if (ret > 0)
                         {
                             runpid += " run pid: " + ret.ToString();
@@ -288,20 +279,16 @@ namespace PlanServerService
                         // 停止后要把它设置为不启动状态
                         dbaccess.UpdateTaskType(task.id, task.runtype, RunType.Stop);
 
-                        processes = FindProcessByPath(task.exepath);
-                        ret = KillProcessByPath(task.exepath);
-
-                        if (ret > 0)
+                        if (processCnt > 0)
                         {
+                            // 杀死进程
+                            ret = KillProcesses(processes);
                             msg.Append("\r\n\t停止完成" + ret.ToString() + "个");
-                            if (processes != null && processes.Count > 0)
+                            runpid += " killed: ";
+                            foreach (ProcessItem item in processes)
                             {
-                                runpid += " killed: ";
-                                foreach (ProcessItem item in processes)
-                                {
-                                    runpid += item.pid.ToString() + ",";
-                                    msg.AppendFormat("\r\n\t\t{0}", item);
-                                }
+                                runpid += item.pid.ToString() + ",";
+                                msg.AppendFormat("\r\n\t\t{0}", item);
                             }
                         }
                         else
@@ -320,16 +307,22 @@ namespace PlanServerService
                         #region 一直运行 或 只运行一次
 
                         // 查找进程是否运行中
-                        ret = FindProcessNumByPath(task.exepath);
                         msg.Append("\r\n\t");
-                        if (ret <= 0)
+                        if (task.runtype == RunType.OneTime)
+                        {
+                            // 更新为停止
+                            dbaccess.UpdateTaskType(task.id, task.runtype, RunType.Stop);
+                            msg.Append("(只运行一次)");
+                        }
+
+                        if (processCnt <= 0)
                         {
                             var lastRunMin = (now - task.pidtime).TotalMinutes;
                             // 一直运行的，每2次启动必须间隔1分钟
                             if (task.runtype == RunType.OneTime || lastRunMin > 1)
                             {
                                 // 启动进程
-                                var pid = StartProcess(task, dbaccess);
+                                var pid = CheckAndStartProcess(task.exepath, task.exepara);
                                 if (pid > 0)
                                 {
                                     runpid += " run pid:" + pid.ToString();
@@ -344,28 +337,18 @@ namespace PlanServerService
                             {
                                 msg.Append("1分钟内任务只能启动1次");
                             }
-
-                            if (task.runtype == RunType.OneTime)
-                            {
-                                // 更新为停止
-                                dbaccess.UpdateTaskType(task.id, task.runtype, RunType.Stop);
-                                msg.Append("(只运行一次)");
-                            }
                         }
                         else
                         {
-                            msg.Append(ret.ToString() + "个任务正运行中");
-                            processes = FindProcessByPath(task.exepath);
-                            if (processes != null && processes.Count > 0)
+                            msg.Append(processCnt.ToString() + "个任务正运行中");
+                            runpid += " run pid:";
+                            foreach (ProcessItem item in processes)
                             {
-                                runpid += " running:";
-                                foreach (ProcessItem item in processes)
-                                {
-                                    runpid += item.pid.ToString() + ",";
-                                    msg.AppendFormat("\r\n\t\t{0}", item);
-                                }
+                                runpid += item.pid.ToString() + ",";
+                                msg.AppendFormat("\r\n\t\t{0}", item);
                             }
                         }
+
                         status = ExeStatus.Running;
                         Output(msg);
 
@@ -391,23 +374,19 @@ namespace PlanServerService
                         }
                         bool? isrun = null;
 
-                        processes = FindProcessByPath(task.exepath);
-                        ret = FindProcessNumByPath(task.exepath);
-                        if (ret <= 0)
+                        if (processCnt <= 0)
                         {
                             status = ExeStatus.Stopped;
                         }
                         else
                         {
-                            if (processes != null && processes.Count > 0)
+                            runpid += " run pid:";
+                            foreach (ProcessItem item in processes)
                             {
-                                runpid += " run pid:";
-                                foreach (ProcessItem item in processes)
-                                {
-                                    runpid += item.pid.ToString() + ",";
-                                    msg.AppendFormat("\r\n\t\t{0}", item);
-                                }
+                                runpid += item.pid.ToString() + ",";
+                                msg.AppendFormat("\r\n\t\t{0}", item);
                             }
+
                             status = ExeStatus.Running;
                         }
 
@@ -480,13 +459,13 @@ namespace PlanServerService
                                 }
                                 dbaccess.AddTimePara(task.id, timepara);
 
-                                if (ret <= 0)
+                                if (processCnt <= 0)
                                 {
                                     var lastRunMin = (now - task.pidtime).TotalMinutes;
                                     if (lastRunMin > 1)
                                     {
                                         // 启动进程
-                                        var pid = StartProcess(task, dbaccess);
+                                        var pid = CheckAndStartProcess(task.exepath, task.exepara);
                                         if (pid > 0)
                                         {
                                             runpid += " run pid:" + pid.ToString();
@@ -504,7 +483,7 @@ namespace PlanServerService
                                 }
                                 else
                                 {
-                                    msg.Append("\r\n\t" + ret.ToString() + "个任务正运行中");
+                                    msg.Append("\r\n\t" + processCnt.ToString() + "个任务正运行中");
                                 }
                                 // 记录之，用于计算结束时间
                                 if (timepara.RunMinute > 0)
@@ -515,14 +494,14 @@ namespace PlanServerService
                                 continue;
                             }
                             // now比endtime大，且在1分钟之内，停止它
-                            if (endtime <= now && (now - endtime).TotalSeconds < 60 && ret > 0)
+                            if (endtime <= now && (now - endtime).TotalSeconds < 60 && processCnt > 0)
                             {
                                 isrun = false;
                                 // 结束完成，删除 开始时间记录，以便下次轮询重新计算
                                 if (isTimeParaSeted)
                                     dbaccess.DelTimePara(task.id, timepara);
 
-                                var killNum = KillProcessByPath(task.exepath);
+                                var killNum = KillProcesses(processes);
                                 if (killNum > 0)
                                 {
                                     msg.Append("\r\n\t任务成功终止" + killNum.ToString() + "个");
@@ -552,8 +531,24 @@ namespace PlanServerService
 
                         break;
                 }
+
                 // 更新任务运行状态
-                var needlog = task.runtype == RunType.Restart || task.runtype == RunType.StopAndWait1Min || task.runtype == RunType.ForceStop || task.runtype == RunType.OneTime;
+                var processesLater = ProcessItem.GetProcessByPath(task.exepath);
+                var newpid = processesLater.Count > 0 ? processesLater[0].pid : 0;
+                if (newpid > 0 || task.pid != 0)
+                {
+                    // 更新任务的pid
+                    dbaccess.UpdateTaskProcessId(task.id, newpid);
+                }
+                var oldpid = processes.Count > 0 ? processes[0].pid : 0;
+
+                var needlog = processesLater.Count != processCnt || oldpid != newpid;
+                if (!needlog)
+                {
+                    needlog = task.pid != newpid;
+                }
+
+                //var needlog = task.runtype == RunType.Restart || task.runtype == RunType.StopAndWait1Min || task.runtype == RunType.ForceStop || task.runtype == RunType.OneTime;
                 dbaccess.UpdateTaskExeStatus(task, status, runpid, needlog);
             }
             catch (Exception ex)
@@ -664,40 +659,32 @@ namespace PlanServerService
         */
 
         // 不能根据进程名杀，可能杀错，比如一个程序放在2个目录下
-        // 根据exe程序物理路径杀进程，并返回杀死进程个数(如果同一exe启动多次，会被全部杀死) 通过Win32_Process查询到id后杀死
-        static int KillProcessByPath(string exePath)
+        // 要根据exe程序物理路径杀进程，并返回杀死进程个数(如果同一exe启动多次，会被全部杀死) 通过Win32_Process查询到id后杀死
+     
+
+        /// <summary>
+        /// 杀死指定的进程列表
+        /// </summary>
+        /// <param name="processes"></param>
+        /// <returns></returns>
+        static int KillProcesses(List<ProcessItem> processes)
         {
-            int ret = 0;
-            string procName = string.Empty;
-            try
+            var ret = 0;
+            foreach (ProcessItem process in processes)
             {
-                List<ProcessItem> processes = ProcessItem.GetProcessesAndCache();
-                foreach (ProcessItem process in processes)
+                var procName = process.name;
+                try
                 {
-                    procName = process.name;
-                    //var commandLine = Convert.ToString(process["CommandLine"]);
-                    var procExePath = process.exePath;
-                    if (exePath.Equals(procExePath, StringComparison.OrdinalIgnoreCase))
-                    {
-                        ret++;
-                        try
-                        {
-                            KillProcessByPid(process.pid);
-                        }
-                        catch (Exception exp)
-                        {
-                            Output("KillProcessByPid出错 " + procName, exp);
-                        }
-                    }
+                    KillProcessByPid(process.pid);
+                    ret++;
                 }
-            }
-            catch (Exception exp)
-            {
-                Output("KillProcessByPath出错 " + procName, exp);
+                catch (Exception exp)
+                {
+                    Output("KillProcessByPid出错 " + procName, exp);
+                }
             }
             return ret;
         }
-
 
         // 根据进程id杀进程
         // ReSharper disable once UnusedMethodReturnValue.Local
@@ -751,95 +738,25 @@ namespace PlanServerService
             return ret;
         }
         */
-
-        // 查询exe路径完全一致的进程个数
-        static int FindProcessNumByPath(string exePath)
-        {
-            int ret = 0;
-            string procName = string.Empty;
-            try
-            {
-                List<ProcessItem> processes = ProcessItem.GetProcessesAndCache();
-                if (processes == null)
-                {
-                    Output("FindProcessNumByPath出错 返回null" + exePath, default(Exception));
-                    return 0;
-                }
-                foreach (var process in processes)
-                {
-                    procName = process.name;
-                    if (exePath.Equals(process.exePath, StringComparison.OrdinalIgnoreCase))
-                    {
-                        ret++;
-                    }
-                }
-            }
-            //catch(COMException exp)
-            //{
-            //    if(exp.ToString().IndexOf("(0x8007045B): 系统正在关机", StringComparison.OrdinalIgnoreCase))
-            //}
-            catch (Exception exp)
-            {
-                Output("FindProcessNumByPath出错 " + procName, exp);
-            }
-            return ret;
-        }
-
-        // 查询exe路径完全一致的进程个数
-        static List<ProcessItem> FindProcessByPath(string exePath)
-        {
-            string procName = string.Empty;
-            try
-            {
-                List<ProcessItem> processes = ProcessItem.GetProcessesAndCache();
-                if (processes == null)
-                {
-                    Output("FindProcessByPath出错 返回null" + exePath, default(Exception));
-                    return null;
-                }
-                List<ProcessItem> ret = new List<ProcessItem>();
-                foreach (var process in processes)
-                {
-                    procName = process.name;
-                    if (exePath.Equals(process.exePath, StringComparison.OrdinalIgnoreCase))
-                    {
-                        ret.Add(process);
-                    }
-                }
-                return ret;
-            }
-            //catch(COMException exp)
-            //{
-            //    if(exp.ToString().IndexOf("(0x8007045B): 系统正在关机", StringComparison.OrdinalIgnoreCase))
-            //}
-            catch (Exception exp)
-            {
-                Output("FindProcessByPath出错 " + procName, exp);
-            }
-            return null;
-        }
-
+        
+        
         static Process FindProcessByPid(int pid)
         {
             return Process.GetProcessById(pid);
         }
 
-        // 启动指定的任务
-        static int StartProcess(TaskItem task, Dal dbaccess)
-        {
-            int pid = CheckAndStartProcess(task.exepath, task.exepara);
-            if (pid > 0)
-            {
-                dbaccess.UpdateTaskProcessId(task.id, pid);
-            }
-            return pid;
-        }
 
         /// <summary>
         /// 启动进程的锁，避免同时启动多个进程
         /// </summary>
         private static object _objStartLock = new object();
 
+        /// <summary>
+        /// 进程不存在时，启动指定的任务
+        /// </summary>
+        /// <param name="exepath"></param>
+        /// <param name="exepara"></param>
+        /// <returns></returns>
         static int CheckAndStartProcess(string exepath, string exepara)
         {
             lock (_objStartLock)
@@ -1069,10 +986,15 @@ namespace PlanServerService
                 return "无效的临时类型";
             }
             string exepath = args[1];
+            // 防止出现 c:\\\\a.exe 或 c:/a.exe这样的路径,统一格式化成：c:\a.exe形式
+            exepath = Path.Combine(Path.GetDirectoryName(exepath) ?? "", Path.GetFileName(exepath) ?? "");
             if (!File.Exists(exepath))
             {
                 return "文件不存在:" + exepath;
             }
+
+            var processes = ProcessItem.GetProcessByPath(exepath);
+
             string exepara = args[2];
             int ret;
             switch ((ImmediateType)imtype)
@@ -1091,7 +1013,7 @@ namespace PlanServerService
                         return exepath + " 运行中，无需启动";
                     }
                 case ImmediateType.Stop:
-                    ret = KillProcessByPath(exepath);
+                    ret = KillProcesses(processes);
                     if (ret > 0)
                     {
                         return exepath + " 成功关闭个数:" + ret.ToString();
@@ -1103,7 +1025,7 @@ namespace PlanServerService
                 case ImmediateType.ReStart:
                     string restartMsg;
                     // 杀死进程
-                    ret = KillProcessByPath(exepath);
+                    ret = KillProcesses(processes);
                     if (ret > 0)
                     {
                         restartMsg = exepath + " 成功关闭个数:" + ret.ToString();
@@ -1874,17 +1796,65 @@ namespace PlanServerService
             return ret;
         }
 
-        public static bool Exists(string name)
+        /// <summary>
+        /// 判断指定进程是否运行中
+        /// </summary>
+        /// <param name="exepath">exe全路径</param>
+        /// <returns></returns>
+        public static bool Exists(string exepath)
         {
             // 经测试，name不区分大小写，斜杠要做转义
-            name = name.Replace("'", "").Replace(@"\", @"\\");
+            exepath = exepath.Replace("'", "").Replace(@"\", @"\\");
             //http://msdn.microsoft.com/en-us/library/windows/desktop/aa394372(v=vs.85).aspx
             var scope = new ManagementScope(@"\\.\root\cimv2");
-            var query = new SelectQuery("SELECT * FROM Win32_Process where ExecutablePath = '" + name + "'");
+            var query = new SelectQuery("SELECT * FROM Win32_Process where ExecutablePath = '" + exepath + "'");
             using (var searcher = new ManagementObjectSearcher(scope, query))
             {
                 return searcher.Get().Count > 0;
             }
+        }
+
+
+        /// <summary>
+        /// 返回指定路径的进程
+        /// </summary>
+        /// <param name="exepath">exe全路径</param>
+        /// <returns></returns>
+        public static List<ProcessItem> GetProcessByPath(string exepath)
+        {
+            var ret = new List<ProcessItem>();
+            // 经测试，name不区分大小写，斜杠要做转义
+            exepath = exepath.Replace("'", "").Replace(@"\", @"\\");
+            //http://msdn.microsoft.com/en-us/library/windows/desktop/aa394372(v=vs.85).aspx
+            var scope = new ManagementScope(@"\\.\root\cimv2");
+            var query = new SelectQuery("SELECT * FROM Win32_Process where ExecutablePath = '" + exepath + "'");
+            using (var searcher = new ManagementObjectSearcher(scope, query))
+            {
+                foreach (var o in searcher.Get())
+                {
+                    var process = (ManagementObject)o;
+                    var name = Convert.ToString(process["name"]);
+                    var exePath = Convert.ToString(process["ExecutablePath"]);
+                    var commandLine = Convert.ToString(process["CommandLine"]);
+                    var pid = Convert.ToInt32(process["ProcessId"]);
+                    var startDate = Convert.ToString(process["CreationDate"]);
+                    var mem = Convert.ToInt64(process["WorkingSetSize"]);
+                    var memVirtual = Convert.ToInt64(process["VirtualSize"]);
+                    var memPage = Convert.ToInt64(process["PagefileUsage"]);
+                    ret.Add(new ProcessItem()
+                    {
+                        commandLine = commandLine,
+                        createDate = startDate,
+                        exePath = exePath,
+                        memory = mem,
+                        memoryPage = memPage,
+                        memoryVirtual = memVirtual,
+                        name = name,
+                        pid = pid
+                    });
+                }
+            }
+            return ret;
         }
 
         public int pid;
