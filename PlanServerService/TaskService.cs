@@ -175,6 +175,16 @@ namespace PlanServerService
             if (tasks == null)
                 return "err未知错误";
             string lastRunTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "," + dbaccess.GetLastRuntime();
+            var dictRunCnt = dbaccess.GetLogCntByTime();
+            int cnt;
+            foreach (var task in tasks)
+            {
+                if (dictRunCnt.TryGetValue(task.exepath, out cnt))
+                {
+                    // 统计最近5分钟运行次数，以便判断是否出异常了，导致频繁启动
+                    task.RunsIn5Minute = cnt;
+                }
+            }
             return lastRunTime + "|" + Common.XmlSerializeToStr(tasks);
         }
 

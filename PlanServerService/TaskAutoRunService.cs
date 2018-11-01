@@ -66,7 +66,7 @@ namespace PlanServerService
                     if (tasks != null && tasks.Any())
                     {
                         Utils.Output("找到" + tasks.Count.ToString() + "个任务");
-                        
+
                         // 读取任务执行前的进程清单，用于后面比对
                         var processes = ProcessItem.GetProcessesAndCache();
 
@@ -95,7 +95,7 @@ namespace PlanServerService
             // ReSharper disable once FunctionNeverReturns
         }
 
-        // 运行单个任务的主调方法
+        // 运行单个任务的主调方法, 注：因为是多线程执行，所以通过task.newpid 临时存储启动了的pid
         static void RunTask(object args)
         {
             try
@@ -160,6 +160,7 @@ namespace PlanServerService
                         // 一直运行 或 只运行一次
                         status = AlwaysOrOneTime(task, processes, msg);
                         break;
+
                     case RunType.PerDay:
                     case RunType.PerWeek:
                     case RunType.PerMonth:
@@ -179,6 +180,7 @@ namespace PlanServerService
 
         static void RunTaskFinish(List<TaskItem> tasks, List<ProcessItem> processesBefore)
         {
+            // var end = DateTime.Now;
             var processesLater = ProcessItem.GetProcessesAndCache(false);
             foreach (TaskItem task in tasks)
             {
@@ -190,12 +192,20 @@ namespace PlanServerService
                 {
                     pidBefore.AppendFormat("{0},", processItem.pid.ToString());
                 }
+                var taskNewPidFinded = false;
                 foreach (var processItem in proLater)
                 {
+                    if (task.NewPid > 0 && processItem.pid == task.NewPid)
+                    {
+                        taskNewPidFinded = true;
+                    }
                     pidEnd.AppendFormat("{0},", processItem.pid.ToString());
                 }
-                // 运行前后的pid不同了
-                if (pidBefore.ToString() != pidEnd.ToString())
+                var noFindAndLog = (task.NewPid > 0 && !taskNewPidFinded);
+
+                // Utils.Output(task.exepath+"\r\n"+pidBefore + "\r\n" + pidEnd + "\r\n" + task.NewPid, "aa");
+                // 运行时的进程不见了，或 前后的pid不同了
+                if (noFindAndLog || pidBefore.ToString() != pidEnd.ToString())
                 {
                     // 更新任务的pid
                     var newpid = proLater.Count > 0 ? proLater[0].pid : 0;
@@ -208,11 +218,31 @@ namespace PlanServerService
                     {
                         pidBefore.AppendFormat("; 运行中pid:{0}", pidEnd);
                     }
+                    if (noFindAndLog)
+                    {
+                        pidBefore.AppendFormat("; 运行中pid{0} 已自动退出", task.NewPid.ToString());
+                    }
 
                     var pidMsg = task.runtype.ToString() + pidBefore;
                     Dal.Default.AddTaskLog(task.exepath, pidMsg);
                 }
             }
+
+#if DEBUG
+            // 输出任务执行前后的进程情况
+            var procMsg = new StringBuilder();
+            // procMsg.AppendFormat("执行前:{0}\r\n", begin.ToString("HH:mm:ss.fff"));
+            foreach (var processItem in processesBefore.OrderBy(item => item.exePath))
+            {
+                procMsg.AppendFormat("{0} {1}\r\n", processItem.pid.ToString(), processItem.exePath);
+            }
+            procMsg.AppendFormat("执行后:{0}\r\n", end.ToString("HH:mm:ss.fff"));
+            foreach (var processItem in processesLater.OrderBy(item => item.exePath))
+            {
+                procMsg.AppendFormat("{0} {1}\r\n", processItem.pid.ToString(), processItem.exePath);
+            }
+            Utils.Output(procMsg.ToString(), "process");
+#endif
         }
 
         // RunType.Stop
@@ -257,6 +287,7 @@ namespace PlanServerService
             var ret = ProcessHelper.CheckAndStartProcess(task.exepath, task.exepara);
             if (ret > 0)
             {
+                task.NewPid = ret;
                 msg.Append("重启完成,pid:" + ret.ToString());
                 if (processes.Count > 0)
                 {
@@ -303,6 +334,7 @@ namespace PlanServerService
             var ret = ProcessHelper.CheckAndStartProcess(task.exepath, task.exepara);
             if (ret > 0)
             {
+                task.NewPid = ret;
                 msg.Append("\r\n\t重启完成,pid:" + ret.ToString());
             }
             else
@@ -357,6 +389,7 @@ namespace PlanServerService
                     var pid = ProcessHelper.CheckAndStartProcess(task.exepath, task.exepara);
                     if (pid > 0)
                     {
+                        task.NewPid = pid;
                         msg.Append("任务成功启动,pid:" + pid.ToString());
                     }
                     else
@@ -398,7 +431,6 @@ namespace PlanServerService
                 return status;
             }
 
-            bool? isrun = null;
 
             if (processes.Count <= 0)
             {
@@ -415,6 +447,7 @@ namespace PlanServerService
 
             StringBuilder sbEndTime = new StringBuilder();
             var now = DateTime.Now;
+            bool? isrun = null;
             foreach (TimePara timepara in task.TaskPara)
             {
                 if (task.runtype == RunType.PerWeek && timepara.WeekOrDay != (int)now.DayOfWeek)
@@ -456,12 +489,6 @@ namespace PlanServerService
                     }
                     endtime = timepara.StartTime.AddMinutes(timepara.RunMinute);
 
-                    // 计算结束时间
-                    //// 不能用now.Day来作为starttime，比如22点启动，运行4小时，应该是次日的2点结束，此时day应该是前一天
-                    //endtime = starttime.AddMinutes(timepara.RunMinute);
-                    //int runDay = CountEndDay(timepara.StartHour, timepara.StartMin, timepara.RunMinute);
-                    //endtime = endtime.AddDays(-runDay);
-
                     sbEndTime.Append("\r\n\t" + timepara.StartTime.ToString("MM-dd_HH:mm") + "~" +
                                      endtime.ToString("MM-dd_HH:mm"));
                 }
@@ -485,13 +512,14 @@ namespace PlanServerService
 
                     if (processes.Count <= 0)
                     {
-                        var lastRunMin = (now - task.pidtime).TotalMinutes;
-                        if (lastRunMin > 1)
+                        var lastRunDiffSecond = (now - task.pidtime).TotalSeconds;
+                        if (lastRunDiffSecond > 60)
                         {
                             // 启动进程
                             var pid = ProcessHelper.CheckAndStartProcess(task.exepath, task.exepara);
                             if (pid > 0)
                             {
+                                task.NewPid = pid;
                                 msg.Append("任务成功启动,pid:" + pid.ToString());
                             }
                             else
@@ -602,7 +630,7 @@ namespace PlanServerService
             }
         }
 
-        #endregion
+#endregion
         
         
     }

@@ -149,7 +149,17 @@ namespace PlanServerService
                 }
             }
             return tmpret;
-        }        
+        }
+        /// <summary>
+        /// 最近5分钟启动次数
+        /// </summary>
+        [DataMember(EmitDefaultValue = false, IsRequired = false)]
+        public int RunsIn5Minute { get; set; }
+
+        /// <summary>
+        /// 执行任务时临时使用
+        /// </summary>
+        public int NewPid { get; set; }
     }
 
     [DataContract]

@@ -348,7 +348,8 @@ namespace PlanServerTaskManager.Web
 <th>单次操作</th>
 <th>当前状态</th>
 <th>最近启动时间</th>
-<th></th>
+<th>序号</th>
+<th alt='5分钟内运行次数'>次数</th>
 </tr>
 ", err);
             foreach (TaskManage task in tasks)
@@ -357,7 +358,7 @@ namespace PlanServerTaskManager.Web
                 {
                     task.tasks.Sort((a, b) => String.Compare(a.desc, b.desc, StringComparison.OrdinalIgnoreCase));
 
-                    sb.AppendFormat(@"<tr class='server'><td>{2}</td><td colspan='10'>
+                    sb.AppendFormat(@"<tr class='server'><td>{2}</td><td colspan='11'>
     当前时间:<span style='color:blue;'>{0}</span>　前次轮询:<span style='color:blue;'>{1}</span>
 <input type='button' value='新增任务' onclick='addrow(this);' />
 <input type='button' value='运行方法' onclick='runMethodOpen(this, 1024);' />　
@@ -378,6 +379,9 @@ namespace PlanServerTaskManager.Web
                                 status = "<span style='color:blue;'>" + status + "<span>";
                                 break;
                         }
+                        var strWarn = item.RunsIn5Minute >= 4
+                            ? "<img src='cdnbak/images/warning.gif' style='height:30px;' onclick='alert(\"5分钟运行超过4次，请检查程序\");'/>"
+                            : "";
                         sb.AppendFormat(@"<tr onmouseover='onRowOver(this);' onmouseout='onRowOut(this);' onclick='onRowClick(this);'>
     <td>{11}</td>
     <td><div class='input-1'><input type='text' title='{1}' style='width:97%;' value='{1}' /></div></td>
@@ -390,10 +394,11 @@ namespace PlanServerTaskManager.Web
     <td title='最近pid:{7}；创建时间:{9}；累计启动次数:{6}' onclick='showTaskLog(this,{13});' style='cursor:pointer;'>{10}</td>
     <td>{8}</td>
     <th>{12}</th>
+    <td>{14}{15}</td>
 </tr>",
                             item.id, item.desc, item.exepath, item.exepara, (int)item.runtype,
                             item.taskpara, item.runcount, item.pid, item.pidtime, item.instime, status, task.ip, idx.ToString(),
-                            ((int)OperationType.TaskLog).ToString());
+                            ((int)OperationType.TaskLog).ToString(), item.RunsIn5Minute.ToString(), strWarn);
                         idx++;
                     }
                 }
@@ -740,7 +745,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
 
         void LocalFileOperation(OperationType type)
         {
-            string filepath = Request.QueryString["file"];
+            string filepath = Request.QueryString["file"] ?? "";
             if (string.IsNullOrEmpty(filepath) || !File.Exists(filepath))
                 Response.Write("指定的文件不存在:" + filepath);
             switch (type)

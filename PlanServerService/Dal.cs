@@ -212,6 +212,37 @@ WHERE id = @id
         {
             return SQLiteHelper.ExecuteDataset(Constr, sql);
         }
+
+        /// <summary>
+        /// 统计最近n分钟内的日志条数
+        /// </summary>
+        /// <param name="minute"></param>
+        /// <returns></returns>
+        public Dictionary<string, int> GetLogCntByTime(int minute = 5)
+        {
+            if (minute < 1)
+                minute = 5;
+            var compareTime = DateTime.Now.AddMinutes(-minute);
+            string sql = "SELECT exepath, COUNT(1) cnt FROM [TaskLog] " +
+                         "WHERE [instime]>@tm GROUP BY exepath";
+            SQLiteParameter[] para = new[] {
+                new SQLiteParameter("@tm",DbType.DateTime){Value = compareTime},
+            };
+            var ret = new Dictionary<string, int>();
+            lock (lockobj)
+            {
+                using (var reader = SQLiteHelper.ExecuteReader(Constr, sql, para))
+                {
+                    while (reader.Read())
+                    {
+                        var key = Convert.ToString(reader["exepath"]);
+                        var val = Convert.ToInt32(reader["cnt"]);
+                        ret.Add(key, val);
+                    }
+                }
+            }
+            return ret;
+        }
         #endregion
 
 

@@ -10,6 +10,11 @@ namespace PlanServer
     {
         static void Main()
         {
+            // 刚刚测试发现，如果error.exe直接抛出异常，比如 int.Parse("abc");
+            // 能在任务管理器里看到2个进程，持续几秒后2个都退出了
+            // Process.Start(@"F:\error.exe", "");
+            // return;
+
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
             Process process = Process.GetCurrentProcess();
