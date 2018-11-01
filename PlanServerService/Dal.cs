@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
 using System.IO;
-using System.Text;
 
 namespace PlanServerService
 {
@@ -262,7 +261,8 @@ WHERE id = @id
         /// <returns></returns>
         public bool UpdateTaskProcessId(int taskid, int pid)
         {
-            string sql = @"UPDATE [tasks] SET [pid] = @pid, pidtime = @time,[runcount] = runcount+1 WHERE id = @id AND [pid] <> @pid";
+            string sql = "UPDATE [tasks] SET [pid] = @pid, pidtime = @time,[runcount] = runcount+1 " +
+                         "WHERE id = @id AND [pid] <> @pid";
             SQLiteParameter[] para = new[] {
                 new SQLiteParameter("@id",DbType.Int64){Value = taskid},
                 new SQLiteParameter("@pid",DbType.Int32){Value = pid},
@@ -277,13 +277,11 @@ WHERE id = @id
         /// <summary>
         /// 更新任务的状态
         /// </summary>
-        /// <param name="task"></param>
+        /// <param name="taskid"></param>
         /// <param name="status"></param>
-        /// <param name="pidMsg"></param>
         /// <returns></returns>
-        public bool UpdateTaskExeStatus(TaskItem task, ExeStatus status, string pidMsg)
+        public bool UpdateTaskExeStatus(int taskid, ExeStatus status)
         {
-            int taskid = task.id;
             string sql = @"UPDATE [tasks] SET [exestatus] = @status WHERE id = @id AND [exestatus] <> @status";
             SQLiteParameter[] para = new[] {
                 new SQLiteParameter("@id",DbType.Int64){Value = taskid},
@@ -482,7 +480,7 @@ WHERE tid=@tid
             {
                 using (var reader = SQLiteHelper.ExecuteReader(Constr, sql))
                 {
-                    List<string> colnames = GetColNames(reader);
+                    // List<string> colnames = GetColNames(reader);
                     while (reader.Read())
                     {
                         var task = new TaskItem

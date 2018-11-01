@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Net;
 using System.Threading;
 using PlanServerService;
 
@@ -28,7 +29,7 @@ namespace PlanServer
             LogHelper.WriteCustom(msg, @"start\", false);
 
             // 轮询数据库，处理任务的线程
-            new Thread(TaskService.Run) { IsBackground = true }.Start();
+            new Thread(TaskAutoRunService.Run) { IsBackground = true }.Start();
 
             if (Common.GetBoolean("enableSocketListen"))
             {
@@ -45,7 +46,7 @@ namespace PlanServer
         static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             var ex = (Exception)e.ExceptionObject;
-            TaskService.Output("未知错误", ex);
+            Utils.Output("未知错误", ex);
         }
 
         /// <summary>

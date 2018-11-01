@@ -172,7 +172,7 @@ namespace PlanServerService
             var ret = MD5_Encrypt(sb.ToString(), Encoding.UTF8);
             if (IsDebug)
             {
-                TaskService.Output(sb + "\r\n" + ret, "socketDetail");
+                Utils.Output("参数和校验码：" + sb + "\r\n" + ret, "socketDetail");
             }
             return ret;
         }

@@ -31,7 +31,7 @@ namespace PlanServerService
                 IPEndPoint serverInfo = new IPEndPoint(IPAddress.Parse("0.0.0.0"), TaskService.ListenPort);
                 ListenSocket.Bind(serverInfo);  //将SOCKET接口和IP端口绑定
                 ListenSocket.Listen(10);        //开始监听，并且指定队列中最多可容纳的等待接受的传入连接数
-                TaskService.Output("listening on port " + TaskService.ListenPort, "socket");
+                Utils.Output("listening on port " + TaskService.ListenPort, "socket");
 
                 Method = method;
 
@@ -41,22 +41,22 @@ namespace PlanServerService
                     {
                         Socket socket = ListenSocket.Accept(); // 接受一个客户端
 
-                        TaskService.Output(socket.RemoteEndPoint + " 成功连接服务器.", "socketDetail");
+                        Utils.Output(socket.RemoteEndPoint + " 成功连接服务器.", "socketDetail");
                         ThreadPool.UnsafeQueueUserWorkItem(RecieveAccept, socket);
                     }
                     catch (Exception ex)
                     {
-                        TaskService.Output("err listening: ", ex);
+                        Utils.Output("err listening: ", ex);
                     }
                 }
             }
             catch (System.Security.SecurityException exp)
             {
-                TaskService.Output("err SecurityException: ", exp);
+                Utils.Output("err SecurityException: ", exp);
             }
             catch (Exception exp)
             {
-                TaskService.Output("err: ", exp);
+                Utils.Output("err: ", exp);
             }
         }
 
@@ -69,13 +69,13 @@ namespace PlanServerService
                 socket = args as Socket;
                 if (socket == null)
                 {
-                    TaskService.Output(" socket为空.", "RecieveAccept");
+                    Utils.Output(" socket为空.", "RecieveAccept");
                     return;
                 }
                 endpoint = socket.RemoteEndPoint.ToString();
                 if (!socket.Connected)
                 {
-                    TaskService.Output(endpoint + " 未连接.", "RecieveAccept");
+                    Utils.Output(endpoint + " 未连接.", "RecieveAccept");
                     return;
                 }
 
@@ -107,7 +107,7 @@ namespace PlanServerService
                     response = "err:未设定处理函数";
                 }
 
-                TaskService.Output(endpoint + "\r\n***接收***:"+ recieveFilePath + "\r\n" + recieveMsg + 
+                Utils.Output(endpoint + "\r\n***接收***:"+ recieveFilePath + "\r\n" + recieveMsg + 
                     "\r\n***响应***:\r\n" + response, "socketResponse");
                 if (socket.Connected)
                 {
@@ -136,7 +136,7 @@ namespace PlanServerService
             {
                 if(socket != null)
                     socket.Close();
-                TaskService.Output(endpoint + " 成功断开服务器.", "socketDetail");
+                Utils.Output(endpoint + " 成功断开服务器.", "socketDetail");
             }
         }
     }

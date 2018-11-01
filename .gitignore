@@ -20,3 +20,4 @@
 /.vs
 /PlanServerTaskManager.Web/admin.db
 /PlanServerTaskManager.Web/Properties/PublishProfiles
+/PlanServerTaskManager.Web/logs

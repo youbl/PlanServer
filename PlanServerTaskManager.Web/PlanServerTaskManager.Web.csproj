@@ -88,6 +88,7 @@
     <Content Include="cdnbak\images\ui-icons_777777_256x240.png" />
     <Content Include="cdnbak\images\ui-icons_cc0000_256x240.png" />
     <Content Include="cdnbak\images\ui-icons_ffffff_256x240.png" />
+    <Content Include="cdnbak\images\warning.gif" />
     <Content Include="cdnbak\jquery-ui-min.css" />
     <Content Include="cdnbak\jquery-ui-min.js" />
     <Content Include="cdnbak\jq_125bece.js" />

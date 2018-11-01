@@ -72,6 +72,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Ext\StringExtensions.cs" />
+    <Compile Include="Utils.cs" />
     <Compile Include="SerializeHelper.cs" />
     <Compile Include="SocketCommon.cs" />
     <Compile Include="FileAdmin\FileResult.cs" />
@@ -82,6 +83,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQLiteHelper.cs" />
     <Compile Include="TaskItem.cs" />
+    <Compile Include="TaskAutoRunService.cs" />
+    <Compile Include="ProcessHelper.cs" />
     <Compile Include="TaskService.cs" />
     <Compile Include="SocketServer.cs" />
     <Compile Include="SocketClient.cs" />

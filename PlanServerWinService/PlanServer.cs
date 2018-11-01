@@ -18,11 +18,11 @@ namespace PlanServerWinService
             string msg = string.Format("启动目录:{0}\r\n启动文件:{1}\r\n程序启动……",
                 AppDomain.CurrentDomain.BaseDirectory,
                 Process.GetCurrentProcess().MainModule.FileName);
-            TaskService.Output(msg);
+            Utils.Output(msg);
 
 
             // OnStart方法不允许有死循环，否则启动服务时会报错，改用Thread进行死循环
-            new Thread(TaskService.Run) { IsBackground = true }.Start();
+            new Thread(TaskAutoRunService.Run) { IsBackground = true }.Start();
 
             if (Common.GetBoolean("enableSocketListen"))
             {
@@ -30,7 +30,7 @@ namespace PlanServerWinService
                 var method = new SocketServer.OperationDelegate(TaskService.ServerOperation);
                 new Thread(SocketServer.ListeningBySocket) { IsBackground = true }.Start(method);
                 msg = " 开始监听端口：" + TaskService.ListenPort;
-                TaskService.Output(msg);
+                Utils.Output(msg);
             }
         }
 

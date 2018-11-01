@@ -48,7 +48,7 @@ namespace PlanServerService
 
             if (IsDebug)
             {
-                TaskService.Output(begin.ToString("HH:mm:ss.fff") + 
+                Utils.Output(begin.ToString("HH:mm:ss.fff") + 
                     " 发送信息长度 " + len + "\r\n" + msg, "socketDetail");
             }
         }
@@ -88,7 +88,7 @@ namespace PlanServerService
                 int tmp = socket.Receive(bytesReceived, currentLen, 0);
                 if (tmp <= 0)
                 {
-                    TaskService.Output(begin.ToString("HH:mm:ss.fff") +
+                    Utils.Output(begin.ToString("HH:mm:ss.fff") +
                     " 收到的base64信息长度" + intDataLen + " 实际字节长度" + recievedLen.ToString(), "socketDetail");
                     return "";//获取的数据与长度不一致
                 }
@@ -104,7 +104,7 @@ namespace PlanServerService
             
             if (IsDebug)
             {
-                TaskService.Output(begin.ToString("HH:mm:ss.fff") +
+                Utils.Output(begin.ToString("HH:mm:ss.fff") +
                     " 收到的base64信息长度" + intDataLen + " 实际字节长度" + recievedLen.ToString() + 
                     " 实际字符串长度" + ret.Length + "\r\n" + ret, "socketDetail");
             }
@@ -159,7 +159,7 @@ namespace PlanServerService
                     if (partLen != perLen)
                     {
                         // 发送长度不一致时，记录异常
-                        TaskService.Output(begin.ToString("HH:mm:ss.fff") +
+                        Utils.Output(begin.ToString("HH:mm:ss.fff") +
                                            " 实际发送" + partLen.ToString() + " 应发长度" + perLen.ToString() + "\r\n" +
                                            filePath, default(Exception));
                     }
@@ -168,7 +168,7 @@ namespace PlanServerService
 
             if (IsDebug)
             {
-                TaskService.Output(begin.ToString("HH:mm:ss.fff") +
+                Utils.Output(begin.ToString("HH:mm:ss.fff") +
                     " 发送文件长度 " + fileLen.ToString() + "\r\n" + filePath, "socketDetail");
             }
         }

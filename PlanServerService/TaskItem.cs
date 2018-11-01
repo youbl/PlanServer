@@ -149,12 +149,7 @@ namespace PlanServerService
                 }
             }
             return tmpret;
-        }
-
-        public int OldPid { get; set; }
-        public ExeStatus NewStatus { get; set; }
-        public string RunMsg { get; set; }
-
+        }        
     }
 
     [DataContract]

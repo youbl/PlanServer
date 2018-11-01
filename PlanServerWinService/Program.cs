@@ -34,7 +34,7 @@ namespace PlanServerWinService
         static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             var ex = (Exception)e.ExceptionObject;
-            TaskService.Output("未知错误，程序退出", ex);
+            Utils.Output("未知错误，程序退出", ex);
         }
     }
 }
