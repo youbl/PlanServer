@@ -180,7 +180,9 @@ namespace PlanServerService
 
         static void RunTaskFinish(List<TaskItem> tasks, List<ProcessItem> processesBefore)
         {
-            // var end = DateTime.Now;
+#if DEBUG
+             var end = DateTime.Now;
+#endif
             var processesLater = ProcessItem.GetProcessesAndCache(false);
             foreach (TaskItem task in tasks)
             {
