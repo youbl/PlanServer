@@ -72,7 +72,7 @@ namespace PlanServerService
 
                         foreach (TaskItem task in tasks)
                         {
-                            Thread thre = new Thread(RunTask) {IsBackground = true};
+                            Thread thre = new Thread(RunTask) { IsBackground = true };
                             threads.Add(thre);
                             thre.Start(task);
                         }
@@ -105,7 +105,7 @@ namespace PlanServerService
                 // 防止出现 c:\\\\a.exe 或 c:/a.exe这样的路径,统一格式化成：c:\a.exe形式
                 task.exepath = Path.Combine(Path.GetDirectoryName(task.exepath) ?? "",
                     Path.GetFileName(task.exepath) ?? "");
-                
+
                 if (!File.Exists(task.exepath))
                 {
                     // 可执行文件不存在, 更新任务运行状态
@@ -121,7 +121,7 @@ namespace PlanServerService
 
                 ExeStatus status = ExeStatus.Unknown; // 判断进程状态，以更新表
                 DateTime now = DateTime.Now;
-                
+
                 StringBuilder msg = new StringBuilder(200);
                 msg.AppendFormat(task.desc);
 
@@ -132,7 +132,7 @@ namespace PlanServerService
                                      task.runtype.ToString(), task.taskpara,
                                      task.exepath, task.exepara, task.runcount.ToString());
                 }
-                
+
                 switch (task.runtype)
                 {
                     case RunType.Stop:
@@ -372,6 +372,7 @@ namespace PlanServerService
 
         static ExeStatus AlwaysOrOneTime(TaskItem task, List<ProcessItem> processes, StringBuilder msg)
         {
+            var ret = ExeStatus.Running;
             // 查找进程是否运行中
             msg.Append("\r\n\t");
             if (task.runtype == RunType.OneTime)
@@ -402,6 +403,7 @@ namespace PlanServerService
                 else
                 {
                     msg.Append("1分钟内任务只能启动1次");
+                    ret = ExeStatus.Stopped;
                 }
             }
             else
@@ -415,7 +417,7 @@ namespace PlanServerService
 
             Utils.Output(msg);
 
-            return ExeStatus.Running;
+            return ret;
         }
 
         static ExeStatus PerTime(TaskItem task, List<ProcessItem> processes, StringBuilder msg)
@@ -528,21 +530,23 @@ namespace PlanServerService
                             {
                                 msg.Append("任务存在，启动失败");
                             }
+                            status = ExeStatus.Running;
                         }
                         else
                         {
                             msg.Append("\r\n\t任务1分钟只能启动1次");
+                            status = ExeStatus.Stopped;
                         }
                     }
                     else
                     {
                         msg.Append("\r\n\t" + processes.Count.ToString() + "个任务运行中");
+                        status = ExeStatus.Running;
                     }
                     // 记录之，用于计算结束时间
                     if (timepara.RunMinute > 0)
                         timepara.StartTime = now;
 
-                    status = ExeStatus.Running;
                     // 不用break，是为了统计并输出结束时间日志
                     continue;
                 }
@@ -632,8 +636,8 @@ namespace PlanServerService
             }
         }
 
-#endregion
-        
-        
+        #endregion
+
+
     }
 }
