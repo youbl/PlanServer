@@ -864,13 +864,9 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
                 return true;
             }
 
-            // 是否内网ip
-            bool isInner = ip.StartsWith("192.168.") ||
-                ip.StartsWith("172.16.") || ip.StartsWith("172.17.") || ip.StartsWith("172.18.") || ip.StartsWith("172.19.") || 
-                ip.StartsWith("10.") ||
-                ip.StartsWith("127.") || ip == "::1";
-                //ip.StartsWith("121.207.242") || ip.StartsWith("121.207.240") || ip.StartsWith("121.207.254") ||
-                //ip.StartsWith("58.22.103.") || ip.StartsWith("58.22.105.") || ip.StartsWith("58.22.107.") ||
+            // 不判断是否内网ip, 避免nginx作反代时，导致判断为内网了, 即必须要有HTTP_X_REAL_IP
+            bool isInner = ip.StartsWith("127.") || ip == "::1";
+
             bool isCompany = false;
             foreach (string item in WhiteIp)
             {
@@ -947,12 +943,12 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
         <span style='font-weight:bold;color:red;'>119.23.138.1 {5}</span><hr />
         QueryString:{0}<br/>
         Form:{1}<br/>
-        RemoteIP:{2}
+        RemoteIP:{2}==={6}<br/>
         LocalIP:{3}
     </form>
     {4}
 </body>
-</html>", Request.QueryString, Request.Form, m_remoteIp, m_localIp, alert, m_domain);
+</html>", Request.QueryString, Request.Form, m_remoteIp, m_localIp, alert, m_domain, m_remoteIpLst);
             Response.Write(loginFrm);
             Response.End();
             
@@ -1098,7 +1094,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
         static string GetRemoteIp()
         {
             string ip = HttpContext.Current.Request.ServerVariables["REMOTE_ADDR"];
-            if (ip != null && ip.StartsWith("10."))
+            if (ip != null && (ip.StartsWith("10.") || ip.StartsWith("172.") || ip.StartsWith("192.168")))
             {
                 string realIp = HttpContext.Current.Request.ServerVariables["HTTP_X_REAL_IP"];
                 if (realIp != null && (realIp = realIp.Trim()) != string.Empty)
@@ -1115,8 +1111,9 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
             string ip1 = request.UserHostAddress;
             string ip2 = request.ServerVariables["REMOTE_ADDR"];
             string realip = request.ServerVariables["HTTP_X_REAL_IP"];
+            string isvia = request.ServerVariables["HTTP_VIA"];
             string forwardip = request.ServerVariables["HTTP_X_FORWARDED_FOR"];
-            return ip1 + ";" + ip2 + ";" + realip + ";" + forwardip;
+            return ip1 + ";" + ip2 + ";" + realip + ";" + isvia + ":" + forwardip;
         }
         public static string GetServerIpList()
         {
