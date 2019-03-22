@@ -254,6 +254,13 @@ namespace PlanServerService
             string exepath = args[1];
             // 防止出现 c:\\\\a.exe 或 c:/a.exe这样的路径,统一格式化成：c:\a.exe形式
             exepath = Path.Combine(Path.GetDirectoryName(exepath) ?? "", Path.GetFileName(exepath) ?? "");
+            if (exepath.IndexOf('/') < 0 && exepath.IndexOf('\\') < 0)
+            {
+                string tmp = FindExeFromAllJob(exepath);
+                if (string.IsNullOrEmpty(tmp))
+                    return "未找到对应job：" + exepath;
+                exepath = tmp;
+            }
             if (!File.Exists(exepath))
             {
                 return "文件不存在:" + exepath;
@@ -311,6 +318,17 @@ namespace PlanServerService
                         return restartMsg + " 进程已存在";
                     }
             }
+        }
+
+        /// <summary>
+        /// 根据exe文件名，在所有job中匹配到第一条记录，
+        /// 用于api调用
+        /// </summary>
+        /// <param name="exeName"></param>
+        /// <returns></returns>
+        static string FindExeFromAllJob(string exeName)
+        {
+            return Dal.Default.GetByExeName(exeName);
         }
         #endregion
 

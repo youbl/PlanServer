@@ -7,7 +7,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Web;
-using System.Web.Security;
 using PlanServerService;
 using PlanServerService.Ext;
 using PlanServerService.FileAdmin;
@@ -41,7 +40,7 @@ namespace PlanServerTaskManager.Web
         {
             if (_logDir == null)
             {
-                if(labLogDir != null)
+                if (labLogDir != null)
                     _logDir = labLogDir.Text;
                 if (string.IsNullOrEmpty(_logDir))
                 {
@@ -56,7 +55,7 @@ namespace PlanServerTaskManager.Web
             _pwdAdminOuter = labMainOuter.Text;
 
             Response.Cache.SetNoStore(); // 这一句会导致Response.WriteFile 无法下载
-            
+
             m_localIp = GetServerIpList();
             m_remoteIp = GetRemoteIp();
             m_remoteIpLst = GetRemoteIpLst();
@@ -69,13 +68,13 @@ namespace PlanServerTaskManager.Web
             //    return;
             //}
 
-//#if !DEBUG
+            //#if !DEBUG
             if (!IsLogined(m_remoteIp))
             {
                 Response.End();
                 return;
             }
-//#endif
+            //#endif
             m_enableSql = !string.IsNullOrEmpty(Request.QueryString["sql"]);
 
             string flg = Request.Form["flg"] ?? Request.QueryString["flg"];
@@ -94,7 +93,7 @@ namespace PlanServerTaskManager.Web
                 //    Response.End();
                 //    return;
                 //}
-   
+
 
                 //string ret = PlanServerService.SocketClient.SendBySocket(ip, int.Parse(port),
                 //    "0096fbac1fb4381cf88f3243e5e03438_0");
@@ -107,7 +106,7 @@ namespace PlanServerTaskManager.Web
                     switch (type)
                     {
                         default:
-                            Response.Write(Request.QueryString +"<hr/>"+Request.Form);
+                            Response.Write(Request.QueryString + "<hr/>" + Request.Form);
                             break;
 
                         #region 任务管理
@@ -221,7 +220,7 @@ namespace PlanServerTaskManager.Web
 
 
         #region 计划任务相关操作方法
-        
+
         void ReadTasks()
         {
             string strServer = Request.Form["tip"];
@@ -229,7 +228,7 @@ namespace PlanServerTaskManager.Web
             {
                 strServer = "127.0.0.1";
             }
-            string[] tip = strServer.Split(new [] { ',', ';', ' ', '|' }, 
+            string[] tip = strServer.Split(new[] { ',', ';', ' ', '|' },
                 StringSplitOptions.RemoveEmptyEntries);
             var all = new List<TaskManage>(tip.Length);
             var err = new StringBuilder();
@@ -300,12 +299,12 @@ namespace PlanServerTaskManager.Web
             }
             task.id = id;
             task.desc = Request.Form["desc"];
-            
+
             string exepath = Request.Form["exepath"];
-// ReSharper disable AssignNullToNotNullAttribute
+            // ReSharper disable AssignNullToNotNullAttribute
             // 防止出现 c:\\\\a.exe 或 c:/a.exe这样的路径,统一格式化成：c:\a.exe形式
             exepath = Path.Combine(Path.GetDirectoryName(exepath), Path.GetFileName(exepath));
-// ReSharper restore AssignNullToNotNullAttribute
+            // ReSharper restore AssignNullToNotNullAttribute
             task.exepath = exepath;
 
             task.exepara = Request.Form["exepara"];
@@ -422,7 +421,7 @@ namespace PlanServerTaskManager.Web
             bool showMd5 = (Request.Form["md5"] ?? "") == "1";
             int sortTmp;
             int.TryParse(Request.Form["sort"] ?? "0", out sortTmp);
-            SortType sort = (SortType) sortTmp;
+            SortType sort = (SortType)sortTmp;
 
             string msg;
             FileResult result = TaskClient.GetDir(strServer, 23244, maindir, sort, showMd5, out msg);
@@ -432,7 +431,7 @@ namespace PlanServerTaskManager.Web
                 return;
             }
             StringBuilder sbRet = new StringBuilder("<span style='font-weight:bold;color:red;'>");
-            sbRet.AppendFormat("{0} dirs, {1} files. server time:{2}. {3}", 
+            sbRet.AppendFormat("{0} dirs, {1} files. server time:{2}. {3}",
                 result.SubDirs.Length.ToString(),
                 result.SubFiles.Length.ToString(),
                 result.ServerTime.ToString("yyyy-MM-dd HH:mm:ss_fff"),
@@ -618,7 +617,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
             string result = TaskClient.FileDownload(strServer, 23244, downfile, out filepath);
             if (string.IsNullOrEmpty(result) || result != "ok")
             {
-                Response.Write(result??"出错了");
+                Response.Write(result ?? "出错了");
                 return;
             }
             Response.Write("ok" + filepath);
@@ -641,7 +640,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
                 Response.End();
                 return;
             }
-            
+
             try
             {
                 if (Request.Files.Count == 0)
@@ -770,7 +769,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
 
 
         #region 其它管理方法 
-        
+
         // 立即执行的操作
         void ImmediateOperate()
         {
@@ -846,7 +845,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
                     foreach (string item in ip.Split(',', ';', '|'))
                     {
                         string tmp = item.Trim();
-                        if(tmp != string.Empty)
+                        if (tmp != string.Empty)
                             ret.Add(tmp);
                     }
                     _whiteIp = ret.ToArray();
@@ -863,6 +862,11 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
             {
                 return true;
             }
+
+            // 允许通过Token访问, 用于Jenkins构建支持
+            string token = Request.QueryString["token"] ?? Request.Form["token"] ?? "";
+            if (token.Equals(labToken.Text, StringComparison.Ordinal))
+                return true;
 
             // 不判断是否内网ip, 避免nginx作反代时，导致判断为内网了, 即必须要有HTTP_X_REAL_IP
             bool isInner = ip.StartsWith("127.") || ip == "::1";
@@ -888,9 +892,13 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 // ReSharper disable once CSharpWarnings::CS0162
                 if (_needProxy && isInner)  // 内网通过其它代理服务器传递的请求
+#pragma warning disable 162
+                // ReSharper disable HeuristicUnreachableCode
                 {
                     str = Request.Form["p"];
                 }
+                // ReSharper restore HeuristicUnreachableCode
+#pragma warning restore 162
 
                 if (string.IsNullOrEmpty(str))
                 {
@@ -951,7 +959,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
 </html>", Request.QueryString, Request.Form, m_remoteIp, m_localIp, alert, m_domain, m_remoteIpLst);
             Response.Write(loginFrm);
             Response.End();
-            
+
         }
         #endregion
 
@@ -974,6 +982,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
         /// 根据登录IP，判断是否对指定的服务器有权限
         /// </summary>
         /// <returns></returns>
+        // ReSharper disable once UnusedMember.Local
         bool ValidServer()
         {
             if (m_isAdmin || !m_needLogin)
@@ -1042,7 +1051,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
                 string item = ip.Trim().Replace("'", "");
                 if (item.Length > 0)
                 {
-                    if(sqlIps.Length > 0)
+                    if (sqlIps.Length > 0)
                         sqlIps += ",";
 
                     sqlIps += "'" + item + "'";
@@ -1089,7 +1098,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
                 }
             }
         }
-        
+
         // 获取远程IP列表
         static string GetRemoteIp()
         {

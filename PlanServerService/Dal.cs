@@ -243,6 +243,28 @@ WHERE id = @id
             }
             return ret;
         }
+
+        /// <summary>
+        /// 根据文件名，查找完整路径
+        /// </summary>
+        /// <param name="exeName"></param>
+        /// <returns></returns>
+        public string GetByExeName(string exeName)
+        {
+            if (string.IsNullOrEmpty(exeName))
+                return "";
+            exeName = exeName.Replace("'", "").Replace("%", "");
+            string sql = @"SELECT [exepath] FROM [tasks] WHERE [exepath] LIKE @path";
+            SQLiteParameter[] para = new[]
+            {
+                new SQLiteParameter("@path", DbType.String) {Value = "%" + exeName + "%"},
+            };
+            lock (lockobj)
+            {
+                return Convert.ToString(SQLiteHelper.ExecuteScalar(Constr, sql, para));
+            }
+        }
+
         #endregion
 
 

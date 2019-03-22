@@ -56,6 +56,7 @@
     <script type="text/javascript" src="PlanAdminOther.js"></script>
 </head>
 <body style='font-size:13px;'>
+    <asp:Label runat="server" Visible="False" ID="labToken" Text="mike-4215f69d"></asp:Label>
     <asp:Label runat="server" Visible="False" ID="labCommon" Text="aaa"></asp:Label>
     <asp:Label runat="server" Visible="False" ID="labCommonOther" Text="4c3e1ec04215f69d6a8e9c023c9e4572"></asp:Label>
     <asp:Label runat="server" Visible="False" ID="labMainInner" Text="1cc94f558046754d7f9b1ae2af8cb78a"></asp:Label>
