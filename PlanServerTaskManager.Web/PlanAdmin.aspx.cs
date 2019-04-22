@@ -927,7 +927,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
                     return true;
                 }
             }
-            WriteLoginForm();
+            WriteLoginForm(str);
             return false;
         }
 
@@ -935,7 +935,7 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
         {
             SetSession("p", "");
         }
-        void WriteLoginForm()
+        void WriteLoginForm(string str)
         {
             string alert = string.Empty;
             if (Request.HttpMethod == "POST")
@@ -952,11 +952,12 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
         QueryString:{0}<br/>
         Form:{1}<br/>
         RemoteIP:{2}==={6}<br/>
-        LocalIP:{3}
+        LocalIP:{3}<br/>
+        {7}
     </form>
     {4}
 </body>
-</html>", Request.QueryString, Request.Form, m_remoteIp, m_localIp, alert, m_domain, m_remoteIpLst);
+</html>", Request.QueryString, Request.Form, m_remoteIp, m_localIp, alert, m_domain, m_remoteIpLst, str);
             Response.Write(loginFrm);
             Response.End();
 
