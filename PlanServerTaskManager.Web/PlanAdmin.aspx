@@ -56,12 +56,20 @@
     <script type="text/javascript" src="PlanAdminOther.js"></script>
 </head>
 <body style='font-size:13px;'>
+    <!-- labToken：token值，用于外部系统无须登录，调用当前服务api，为空表示禁用token功能 -->
+    <!-- labCommon：用于内网或办公网络登录的密钥MD5加密后的值 -->
+    <!-- labCommonOther：用于内网或办公网络普通用户登录的密钥MD5加密后的值，等效于labCommon -->
+    <!-- labMainInner：用于内网或办公网络管理员登录的密钥MD5加密后的值 -->
+    <!-- labMainOuter：用于外网管理员登录的密钥MD5加密后的值 -->
+    <!-- labLogDir：服务器日志记录目录 -->
+    <!-- labDingHookurl：页面修改或执行操作成功后，要通知的钉钉机器人url -->
     <asp:Label runat="server" Visible="False" ID="labToken" Text="mike-4215f69d"></asp:Label>
     <asp:Label runat="server" Visible="False" ID="labCommon" Text="aaa"></asp:Label>
     <asp:Label runat="server" Visible="False" ID="labCommonOther" Text="4c3e1ec04215f69d6a8e9c023c9e4572"></asp:Label>
     <asp:Label runat="server" Visible="False" ID="labMainInner" Text="1cc94f558046754d7f9b1ae2af8cb78a"></asp:Label>
     <asp:Label runat="server" Visible="False" ID="labMainOuter" Text="xxx"></asp:Label>
     <asp:Label runat="server" Visible="False" ID="labLogDir" Text="e:\weblogs\planserver"></asp:Label>
+    <asp:Label runat="server" Visible="False" ID="labDingHookurl" Text="https://oapi.dingtalk.com/robot/send?access_token=xxx"></asp:Label>
 <div>
     <div style="background-color:greenyellow">
         <label><input type="checkbox" onclick="chkAll(this);" />全选服务器</label>

@@ -1,4 +1,6 @@
-﻿namespace PlanServerService
+﻿using PlanServerService.Hook;
+
+namespace PlanServerService
 {
     public enum OperationType
     {
@@ -9,14 +11,17 @@
         /// <summary>
         /// 保存多个任务
         /// </summary>
+        [DingHook("保存多个任务")]
         SaveTasks = 1,
         /// <summary>
         /// 删除多个任务
         /// </summary>
+        [DingHook("删除多个任务")]
         DelTasks = 2,
         /// <summary>
         /// 立即启动或停止任务
         /// </summary>
+        [DingHook("任务开启/关闭")]
         Immediate = 3,
         /// <summary>
         /// 显示任务日志
@@ -36,12 +41,14 @@
         /// 参数1：要重命名的目录完整路径
         /// 参数2：新目录名（含路径时，仅最后一个斜杠后的目录名有效，如C:\abc\def,只取def）
         /// </summary>
+        [DingHook("重命名目录")]
         DirRename = 101,
         /// <summary>
         /// 重命名文件。多个参数以 | 分隔
         /// 参数1：要重命名的文件完整路径
         /// 参数2：新文件名（含路径时，仅最后一个斜杠后的文件名有效，如C:\abc\def.txt,只取def.txt）
         /// </summary>
+        [DingHook("重命名文件")]
         FileRename = 102,
         /// <summary>
         /// 删除目录或文件。多个参数以 | 分隔.
@@ -50,6 +57,7 @@
         /// 参数3：要删除的子目录列表,多个目录以 * 分隔.
         /// 返回值：删除文件数|删除目录数
         /// </summary>
+        [DingHook("删除目录/文件")]
         DirDel = 103,
         /// <summary>
         /// 获取目录大小。
@@ -79,6 +87,7 @@
         /// 参数1：zip文件完整路径。
         /// 参数2：要解压到的目录，空表示zip文件所在目录
         /// </summary>
+        [DingHook("解压文件")]
         FileUnZip = 109,
         /// <summary>
         /// 移动目录或文件列表。多个参数以 | 分隔.
@@ -88,12 +97,14 @@
         /// 参数4：要移动的子目录列表,多个目录以 * 分隔.
         /// 返回值：移动文件数|移动目录数|移动的目录下的子文件数
         /// </summary>
+        [DingHook("移动目录")]
         DirMove = 110,
         /// <summary>
         /// 上传文件。多个参数以 | 分隔.
         /// 参数1：目录完整路径.
         /// 参数2：上传文件名.
         /// </summary>
+        [DingHook("上传文件")]
         FileUpload = 111,
 
         /// <summary>
@@ -109,6 +120,7 @@
         /// <summary>
         /// 加载并运行指定的dll里的方法
         /// </summary>
+        [DingHook("运行方法")]
         RunMethod = 1024,
 
         /// <summary>
@@ -116,9 +128,13 @@
         /// </summary>
         LogOut = 2048,
 
+        [DingHook("添加管理员IP")]
         AddAdminIp = 2049,
+        [DingHook("删除管理员IP")]
         DelAdminIp = 2050,
+        [DingHook("添加服务器")]
         AddAdminServer = 2051,
+        [DingHook("删除服务器")]
         DelAdminServer = 2052,
         GetAdminServers = 2053,
         GetAdminListServers = 2054,
@@ -132,6 +148,7 @@
         /// <summary>
         /// 执行SQL
         /// </summary>
+        [DingHook("执行SQL")]
         RunSql = 4444,
     }
 }

@@ -72,6 +72,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Ext\StringExtensions.cs" />
+    <Compile Include="Hook\HookHelper.cs" />
+    <Compile Include="Hook\BaseHook.cs" />
+    <Compile Include="Hook\IHook.cs" />
+    <Compile Include="Hook\DingHookAttribute.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="SerializeHelper.cs" />
     <Compile Include="SocketCommon.cs" />

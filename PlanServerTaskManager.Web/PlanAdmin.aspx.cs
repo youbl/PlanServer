@@ -5,22 +5,24 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web;
 using PlanServerService;
 using PlanServerService.Ext;
 using PlanServerService.FileAdmin;
+using PlanServerService.Hook;
 
 namespace PlanServerTaskManager.Web
 {
     public partial class PlanAdmin : System.Web.UI.Page
     {
         //下面替换为你需要用的md5值，比如a3de83c477b3b24d52a1c8bebbc7747b是sj.91.com
-        protected string _pwd;   // ip在白名单里时，我们部门进入此页面的密码md5值
-        protected string _pwdOther; // ip在白名单里时，其它部门进入此页面的密码md5值，tqnd.91.
+        static string _pwd;   // ip在白名单里时，我们部门进入此页面的密码md5值
+        static string _pwdOther; // ip在白名单里时，其它部门进入此页面的密码md5值，tqnd.91.
 
-        protected string _pwdAdminInner;   // 内网管理员进入此页面的密码md5值
-        protected string _pwdAdminOuter;   // 外网管理员进入此页面的密码md5值
+        static string _pwdAdminInner;   // 内网管理员进入此页面的密码md5值
+        static string _pwdAdminOuter;   // 外网管理员进入此页面的密码md5值
 
         protected const bool _needProxy = false;                            // 是否需要通过代理访问此页面
 
@@ -38,28 +40,11 @@ namespace PlanServerTaskManager.Web
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            if (_logDir == null)
-            {
-                if (labLogDir != null)
-                    _logDir = labLogDir.Text;
-                if (string.IsNullOrEmpty(_logDir))
-                {
-                    _logDir = @"e:\weblogs\planserver\";
-                }
-            }
+            InitVar();
             // ClearDir(SocketCommon.TmpDir);
-
-            _pwd = labCommon.Text;
-            _pwdOther = labCommonOther.Text;
-            _pwdAdminInner = labMainInner.Text;
-            _pwdAdminOuter = labMainOuter.Text;
 
             Response.Cache.SetNoStore(); // 这一句会导致Response.WriteFile 无法下载
 
-            m_localIp = GetServerIpList();
-            m_remoteIp = GetRemoteIp();
-            m_remoteIpLst = GetRemoteIpLst();
-            m_currentUrl = GetUrl(false);
             //if (string.IsNullOrEmpty(_pwd))
             //{
             //    Response.Write("未设置密码，请修改页面源码以设置密码\r\n" +
@@ -75,6 +60,7 @@ namespace PlanServerTaskManager.Web
                 return;
             }
             //#endif
+
             m_enableSql = !string.IsNullOrEmpty(Request.QueryString["sql"]);
 
             string flg = Request.Form["flg"] ?? Request.QueryString["flg"];
@@ -97,125 +83,175 @@ namespace PlanServerTaskManager.Web
 
                 //string ret = PlanServerService.SocketClient.SendBySocket(ip, int.Parse(port),
                 //    "0096fbac1fb4381cf88f3243e5e03438_0");
-                try
-                {
-                    string msg = HttpUtility.UrlDecode(Convert.ToString(Request.Form));
-                    msg = Request.Url + Environment.NewLine + msg;
-                    OperationType type = (OperationType)opType;
-                    Log(msg, type.ToString() + "_" + flg, null);
-                    switch (type)
-                    {
-                        default:
-                            Response.Write(Request.QueryString + "<hr/>" + Request.Form);
-                            break;
 
-                        #region 任务管理
-                        case OperationType.GetAllTasks:
-                            ReadTasks();
-                            break;
-                        case OperationType.SaveTasks:
-                            SaveTask();
-                            break;
-                        case OperationType.DelTasks:
-                            DeleteById();
-                            break;
-                        case OperationType.TaskLog:
-                            ShowTaskLog();
-                            break;
+                SwitchOperation(opType);
 
-
-                        case OperationType.Immediate:
-                            ImmediateOperate();
-                            break;
-
-                        case OperationType.RunMethod:
-                            RunDllMethod();
-                            break;
-                        #endregion
-
-
-                        #region 服务器和权限管理
-                        case OperationType.AddAdminIp:
-                            AddAdminIp();
-                            break;
-                        case OperationType.DelAdminIp:
-                            DelAdminIp();
-                            break;
-                        case OperationType.AddAdminServer:
-                            AddAdminServer();
-                            break;
-                        case OperationType.DelAdminServer:
-                            DelAdminServer();
-                            break;
-                        case OperationType.GetAdminServers:
-                            GetAdminServers();
-                            break;
-                        case OperationType.GetAdminListServers:
-                            GetAdminServerList();
-                            break;
-                        #endregion
-
-
-                        #region 目录管理
-                        case OperationType.DirShow:// 列目录
-                            ShowDir();
-                            break;
-                        case OperationType.DirMove:
-                            FileMove();
-                            break;
-                        case OperationType.DirDel:
-                            FileDel();
-                            break;
-                        case OperationType.DirCreate:
-                            DirCreate();
-                            break;
-                        case OperationType.DirRename:
-                            DirRename(true);
-                            break;
-                        case OperationType.FileRename:
-                            DirRename(false);
-                            break;
-                        case OperationType.FileDownload:
-                            FileDownload();
-                            break;
-                        case OperationType.FileUpload:
-                            FileUpload();
-                            break;
-                        case OperationType.FileUnZip:
-                            FileUnZip();
-                            break;
-                        case OperationType.DirDownloadZip:
-                            DirDownloadZip();
-                            break;
-                        case OperationType.DirSizeGet:
-                            DirSizeGet();
-                            break;
-                        case OperationType.LocalFileDown:
-                        case OperationType.LocalFileOpen:
-                            LocalFileOperation(type);
-                            break;
-                        #endregion
-
-                        case OperationType.LogOut:
-                            LogOut();
-                            break;
-
-                        case OperationType.GetProcesses:
-                            GetProcess();
-                            break;
-
-                        case OperationType.RunSql:
-                            RunSql();
-                            break;
-                    }
-                }
-                catch (ThreadAbortException) { }
-                catch (Exception exp)
-                {
-                    Response.Write(exp.ToString());
-                }
                 Response.End();
             }
+        }
+
+
+        void InitVar()
+        {
+            if (_logDir == null)
+            {
+                if (labLogDir != null)
+                    _logDir = labLogDir.Text.Trim();
+                if (string.IsNullOrEmpty(_logDir))
+                {
+                    _logDir = @"e:\weblogs\planserver\";
+                }
+
+                _pwd = labCommon.Text.Trim();
+                _pwdOther = labCommonOther.Text.Trim();
+                _pwdAdminInner = labMainInner.Text.Trim();
+                _pwdAdminOuter = labMainOuter.Text.Trim();
+
+                DingHookAttribute.Url.Add(labDingHookurl.Text.Trim());
+            }
+            
+            m_localIp = GetServerIpList();
+            m_remoteIp = GetRemoteIp();
+            m_remoteIpLst = GetRemoteIpLst();
+            m_currentUrl = GetUrl(false);
+        }
+
+
+        void SwitchOperation(int opType)
+        {
+            try
+            {
+                string msg = HttpUtility.UrlDecode(Convert.ToString(Request.Form));
+                msg = Request.Url + Environment.NewLine + msg;
+                OperationType type = (OperationType)opType;
+                Log(msg, type.ToString() + "_" + opType, null);
+                
+                switch (type)
+                {
+                    default:
+                        Response.Write(Request.QueryString + "<hr/>" + Request.Form);
+                        break;
+
+                    #region 任务管理
+                    case OperationType.GetAllTasks:
+                        ReadTasks();
+                        break;
+                    case OperationType.SaveTasks:
+                        SaveTask();
+                        break;
+                    case OperationType.DelTasks:
+                        DeleteById();
+                        break;
+                    case OperationType.TaskLog:
+                        ShowTaskLog();
+                        break;
+
+
+                    case OperationType.Immediate:
+                        ImmediateOperate();
+                        break;
+
+                    case OperationType.RunMethod:
+                        RunDllMethod();
+                        break;
+                    #endregion
+
+
+                    #region 服务器和权限管理
+                    case OperationType.AddAdminIp:
+                        AddAdminIp();
+                        break;
+                    case OperationType.DelAdminIp:
+                        DelAdminIp();
+                        break;
+                    case OperationType.AddAdminServer:
+                        AddAdminServer();
+                        break;
+                    case OperationType.DelAdminServer:
+                        DelAdminServer();
+                        break;
+                    case OperationType.GetAdminServers:
+                        GetAdminServers();
+                        break;
+                    case OperationType.GetAdminListServers:
+                        GetAdminServerList();
+                        break;
+                    #endregion
+
+
+                    #region 目录管理
+                    case OperationType.DirShow:// 列目录
+                        ShowDir();
+                        break;
+                    case OperationType.DirMove:
+                        FileMove();
+                        break;
+                    case OperationType.DirDel:
+                        FileDel();
+                        break;
+                    case OperationType.DirCreate:
+                        DirCreate();
+                        break;
+                    case OperationType.DirRename:
+                        DirRename(true);
+                        break;
+                    case OperationType.FileRename:
+                        DirRename(false);
+                        break;
+                    case OperationType.FileDownload:
+                        FileDownload();
+                        break;
+                    case OperationType.FileUpload:
+                        FileUpload();
+                        break;
+                    case OperationType.FileUnZip:
+                        FileUnZip();
+                        break;
+                    case OperationType.DirDownloadZip:
+                        DirDownloadZip();
+                        break;
+                    case OperationType.DirSizeGet:
+                        DirSizeGet();
+                        break;
+                    case OperationType.LocalFileDown:
+                    case OperationType.LocalFileOpen:
+                        LocalFileOperation(type);
+                        break;
+                    #endregion
+
+                    case OperationType.LogOut:
+                        LogOut();
+                        break;
+
+                    case OperationType.GetProcesses:
+                        GetProcess();
+                        break;
+
+                    case OperationType.RunSql:
+                        RunSql();
+                        break;
+                }
+
+                DoHook(type, msg);
+            }
+            catch (ThreadAbortException) { }
+            catch (Exception exp)
+            {
+                Response.Write(exp.ToString());
+            }
+        }
+
+        void DoHook(OperationType type, string msg)
+        {
+            var reg = new Regex(@"runtype=(\d+)");
+            var match = reg.Match(msg);
+            if (match.Success)
+            {
+                var runtype = (RunType) int.Parse(match.Result("$1"));
+                msg = reg.Replace(msg, "runtype=" + runtype);
+            }
+
+            HookHelper.DoHook(type, msg);
         }
 
 
@@ -863,10 +899,13 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
                 return true;
             }
 
-            // 允许通过Token访问, 用于Jenkins构建支持
-            string token = Request.QueryString["token"] ?? Request.Form["token"] ?? "";
-            if (token.Equals(labToken.Text, StringComparison.Ordinal))
-                return true;
+            if (!string.IsNullOrEmpty(labToken.Text))
+            {
+                // 允许通过Token访问, 用于Jenkins构建支持
+                string token = Request.QueryString["token"] ?? Request.Form["token"] ?? "";
+                if (token.Equals(labToken.Text, StringComparison.Ordinal))
+                    return true;
+            }
 
             // 不判断是否内网ip, 避免nginx作反代时，导致判断为内网了, 即必须要有HTTP_X_REAL_IP
             bool isInner = ip.StartsWith("127.") || ip == "::1";
