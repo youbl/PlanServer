@@ -24,17 +24,22 @@ namespace PlanServerTaskManager.Web
         static string _pwdAdminInner;   // 内网管理员进入此页面的密码md5值
         static string _pwdAdminOuter;   // 外网管理员进入此页面的密码md5值
 
-        protected const bool _needProxy = false;                            // 是否需要通过代理访问此页面
+        private static string _token;   // 进入此页面使用的token值，用于api访问
 
-        private static string _logDir;
+        protected const bool _needProxy = false; // 是否需要通过代理访问此页面
 
-        protected string m_currentUrl;
-        protected string m_localIp, m_remoteIp, m_remoteIpLst;
+        private static string _logDir;  // 记录日志所在目录
 
+        protected string m_currentUrl;  // 当前请求的完整URL
+        protected string m_localIp, m_remoteIp, m_remoteIpLst; // 服务器IP、客户端IP、客户端完整IP（含代理）
+        protected bool m_isTokenAccess = false;  // 当前登录用户是否通过API进入
+
+        // 进入此页面是否需要密码
         protected static bool m_needLogin = !(ConfigurationManager.AppSettings["PlanNoPwd"] ?? "").Equals("true", StringComparison.OrdinalIgnoreCase);
-        protected static bool m_isAdmin = !m_needLogin;
-        protected static bool m_enableSql = false;
+        protected static bool m_isAdmin = !m_needLogin;  // 进入此页面的是否管理员
+        protected static bool m_enableSql = false;       // 是否允许显示sql操作界面
 
+        // 此页面部署所在的域名
         protected static string m_domain = ConfigurationManager.AppSettings["PlanDomainName"] ?? "aaa.bbb.com";
 
 
@@ -107,9 +112,11 @@ namespace PlanServerTaskManager.Web
                 _pwdAdminInner = labMainInner.Text.Trim();
                 _pwdAdminOuter = labMainOuter.Text.Trim();
 
+                _token = labToken.Text.Trim();
+
                 DingHookAttribute.Url.Add(labDingHookurl.Text.Trim());
             }
-            
+
             m_localIp = GetServerIpList();
             m_remoteIp = GetRemoteIp();
             m_remoteIpLst = GetRemoteIpLst();
@@ -125,7 +132,7 @@ namespace PlanServerTaskManager.Web
                 msg = Request.Url + Environment.NewLine + msg;
                 OperationType type = (OperationType)opType;
                 Log(msg, type.ToString() + "_" + opType, null);
-                
+
                 switch (type)
                 {
                     default:
@@ -243,11 +250,17 @@ namespace PlanServerTaskManager.Web
 
         void DoHook(OperationType type, string msg)
         {
+            // API进入要替换msg
+            if (m_isTokenAccess)
+            {
+                msg = msg.Replace(_token, "xxx");
+            }
+            // 替换数字为枚举值
             var reg = new Regex(@"runtype=(\d+)");
             var match = reg.Match(msg);
             if (match.Success)
             {
-                var runtype = (RunType) int.Parse(match.Result("$1"));
+                var runtype = (RunType)int.Parse(match.Result("$1"));
                 msg = reg.Replace(msg, "runtype=" + runtype);
             }
 
@@ -899,12 +912,15 @@ onclick='fileDownOpen(""{0}"",1);' tabindex='-1'>开</a>
                 return true;
             }
 
-            if (!string.IsNullOrEmpty(labToken.Text))
+            if (!string.IsNullOrEmpty(_token))
             {
                 // 允许通过Token访问, 用于Jenkins构建支持
                 string token = Request.QueryString["token"] ?? Request.Form["token"] ?? "";
-                if (token.Equals(labToken.Text, StringComparison.Ordinal))
+                if (token.Equals(_token, StringComparison.Ordinal))
+                {
+                    m_isTokenAccess = true;
                     return true;
+                }
             }
 
             // 不判断是否内网ip, 避免nginx作反代时，导致判断为内网了, 即必须要有HTTP_X_REAL_IP
