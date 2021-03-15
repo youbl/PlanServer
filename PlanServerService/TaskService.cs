@@ -286,6 +286,10 @@ namespace PlanServerService
                 case ImmediateType.Stop:
                     var processes1 = ProcessItem.GetProcessByPath(exepath);
                     ret = ProcessHelper.KillProcesses(processes1);
+
+                    // 有时间，应该改造成事件模式，发事件给消费者
+                    TaskAutoRunService.AddStopJob(exepath);
+
                     if (ret > 0)
                     {
                         return exepath + " 成功关闭个数:" + ret.ToString();

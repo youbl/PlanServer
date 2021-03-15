@@ -43,6 +43,34 @@ namespace PlanServerService
             }
         }
 
+        /// <summary>
+        /// 通过api停止job时，要停止一轮检测，避免刚停止又被启动
+        /// </summary>
+        private static Dictionary<String, int> stopNextLoop = new Dictionary<string, int>();
+        /// <summary>
+        /// 添加一个job，停止一轮检测
+        /// </summary>
+        /// <param name="exePath"></param>
+        public static void AddStopJob(String exePath)
+        {
+            lock (stopNextLoop)
+            {
+                stopNextLoop[exePath] = 1;
+            }
+        }
+        /// <summary>
+        /// 移除一个job，并返回移除成功失败
+        /// </summary>
+        /// <param name="exePath"></param>
+        /// <returns></returns>
+        public static bool RemoveStopJob(String exePath)
+        {
+            lock (stopNextLoop)
+            {
+                return stopNextLoop.Remove(exePath);
+            }
+        }
+
         #endregion
 
 
@@ -112,6 +140,12 @@ namespace PlanServerService
                     Dal.Default.UpdateTaskExeStatus(task.id, ExeStatus.NoFile);
                     var tmpmsg = task.desc + " " + task.exepath + " 文件不存在";
                     Utils.Output(tmpmsg);
+                    return;
+                }
+
+                if (RemoveStopJob(task.exepath))
+                {
+                    Utils.Output(task.desc + " " + task.exepath + " 停止一轮检测");
                     return;
                 }
 
